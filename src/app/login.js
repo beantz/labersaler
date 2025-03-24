@@ -3,32 +3,35 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Keyb
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
 
+  // Função que é chamada ao clicar em "Entrar"
   const handleLogin = () => {
     console.log('Email:', email);
     console.log('Password:', password);
+
+    // Após o login, redireciona para a página "home"
+    router.push('/home');
   };
 
   const handleCreateAccount = () => {
-    router.push('/createAccount');
+    router.push('/createAccount'); // Navega para a tela de criação de conta
   };
 
   const handleForgotPassword = () => {
-    router.push('/forgotPassword');
+    router.push('/forgotPassword'); // Navega para a tela de recuperação de senha
   };
 
   return (
-   
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.innerContainer}>
-      <MaterialCommunityIcons name="book-open-variant" size={60} color="#007BFF" />
+        <MaterialCommunityIcons name="book-open-variant" size={60} color="#007BFF" />
         <Text style={styles.title}>Laber-Sale</Text>
-        <Text style={styles.title}>Realize  seu Login</Text>
+        <Text style={styles.title}>Realize seu Login</Text>
+        
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -47,15 +50,17 @@ const LoginScreen = () => {
           secureTextEntry
         />
         
-        {/* Botão personalizado */}
+        {/* Botão para login */}
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Entrar</Text>
         </TouchableOpacity>
 
+        {/* Link para recuperação de senha */}
         <TouchableOpacity onPress={handleForgotPassword}>
           <Text style={styles.link}>Esqueceu a senha?</Text>
         </TouchableOpacity>
         
+        {/* Link para criar conta */}
         <TouchableOpacity onPress={handleCreateAccount}>
           <Text style={styles.link}>Criar Conta</Text>
         </TouchableOpacity>
@@ -95,7 +100,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: '#000000', // Azul padrão para botões
+    backgroundColor: 'blue', // Cor azul para o botão
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',

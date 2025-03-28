@@ -5,9 +5,22 @@ import { View, Text, StyleSheet, TextInput, Button } from 'react-native';
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState('');
 
-  const handleResetPassword = () => {
-    console.log('Email para recuperação de senha:', email);
-    // Aqui você pode adicionar a lógica para enviar um email de recuperação de senha
+  const handleResetPassword = async () => {
+    
+    try {
+      
+      await fetch('http://192.168.0.104:3000/esqueci-senha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.');
+    } catch (error) {
+      Alert.alert('Erro', error.response?.data?.error || 'Falha ao enviar email.');
+    }
   };
 
   return (

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import uuid from 'react-native-uuid';
+
+let ip = "192.168.0.104";
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -9,12 +12,42 @@ const LoginScreen = () => {
   const router = useRouter();
 
   // Função que é chamada ao clicar em "Entrar"
-  const handleLogin = () => {
-    console.log('Email:', email);
-    console.log('Password:', password);
+  const handleLogin = async () => {
 
-    // Após o login, redireciona para a página "home"
-    router.push('/home');
+    try {
+      let response = await fetch(`http://${ip}:3000/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      if(response.ok) {
+
+        router.push('/home');
+
+      } else {
+
+        let data = await response.json();
+
+        //resgatando os erros retornados no controller caso tiver algum
+        if (data.errors) {
+          // Junta todas as mensagens de erro em uma string
+          const errorMessages = data.errors.map(err => err.msg).join('\n');
+          alert(errorMessages);
+        } 
+      }
+
+    } catch (error) {
+      
+      alert('Ocorreu um erro ao tentar fazer login.');
+
+    }
+
   };
 
   const handleCreateAccount = () => {

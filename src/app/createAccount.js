@@ -1,19 +1,51 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 
 const CadastroScreen = () => {
-  const [nome, setNome] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const router = useRouter();
 
-  const handleCadastro = () => {
-    if (senha !== confirmarSenha) {
-      alert('As senhas não coincidem!');
-      return;
+  let ip = "192.168.0.104";
+
+  const handleCadastro = async () => {
+
+    try {
+      let response = await fetch(`http://${ip}:3000/cadastro`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          password: password,
+          confirmPassword: confirmPassword,
+        }),
+      });
+
+      if(response.ok) {
+
+        //retornar para perfil de usuario
+        router.push('/home');
+
+      } else {
+        let data = await response.json();
+
+        //resgatando os erros retornados no controller caso tiver algum
+        if (data.errors) {
+          // Junta todas as mensagens de erro em uma string
+          const errorMessages = data.errors.map(err => err.msg).join('\n');
+          alert(errorMessages);
+        } 
+      }
+      
+    } catch (error) {
+      alert('Ocorreu um erro ao tentar criar sua conta');
     }
-    
-    console.log({ nome, email, senha,  });
   };
 
   return (
@@ -24,8 +56,8 @@ const CadastroScreen = () => {
         style={styles.input}
         placeholder="Nome"
         placeholderTextColor="#666"
-        value={nome}
-        onChangeText={setNome}
+        value={name}
+        onChangeText={setName}
       />
 
       <TextInput
@@ -42,8 +74,8 @@ const CadastroScreen = () => {
         placeholder="Senha"
         placeholderTextColor="#666"
         secureTextEntry
-        value={senha}
-        onChangeText={setSenha}
+        value={password}
+        onChangeText={setPassword}
       />
 
       <TextInput
@@ -51,8 +83,8 @@ const CadastroScreen = () => {
         placeholder="Confirmar Senha"
         placeholderTextColor="#666"
         secureTextEntry
-        value={confirmarSenha}
-        onChangeText={setConfirmarSenha}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
       />
 
       <TouchableOpacity style={styles.button} onPress={handleCadastro}>

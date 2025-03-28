@@ -1,15 +1,64 @@
 // app/cadastroLivro.js
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router'; // Usando o useRouter do expo-router
+import ModalDropdown from 'react-native-modal-dropdown';
 
 export default function CadastroLivro() {
+  const [titulo, setTitulo] = useState('');
+  const [autor, setAutor] = useState('');
+  const [preco, setPreco] = useState('');
+  // const [categoria, setCategoria] = useState('');
   const router = useRouter(); // Usando o hook useRouter
 
   // Função para voltar para a Home
   const handleVoltarHome = () => {
+
     router.push('/home'); // Navega para a página Home
+
   };
+
+  // const [selectedCategory, setSelectedCategory] = useState('');
+
+  let ip = "192.168.0.104";
+
+  const handleCadastrarLvro = async () => {
+
+    try {
+      let response = await fetch(`http://${ip}:3000/livros/cadastrar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          titulo: titulo,
+          autor: autor,
+          preco: preco,
+          // categoria: categoria,
+        }),
+      });
+
+      //resgatando os erros retornados no controller caso tiver algum
+      if(response.ok) {
+
+        //retornar para perfil de usuario
+        router.push('/home');
+
+      } else {
+        let data = await response.json();
+
+        //resgatando os erros retornados no controller caso tiver algum
+        if (data.errors) {
+          // Junta todas as mensagens de erro em uma string
+          const errorMessages = data.errors.map(err => err.msg).join('\n');
+          alert(errorMessages);
+        } 
+      }
+    } catch (error) {
+      alert('Ocorreu um erro ao tentar cadastrar o livro');
+    }
+
+  }
 
   return (
     <View style={styles.container}>
@@ -18,18 +67,24 @@ export default function CadastroLivro() {
       <TextInput
         placeholder="Título do Livro"
         style={styles.input}
+        onChangeText={setTitulo}
       />
       <TextInput
         placeholder="Autor do Livro"
         style={styles.input}
+        onChangeText={setAutor}
       />
+
       <TextInput
         placeholder="Preço"
         keyboardType="numeric"
         style={styles.input}
+        onChangeText={setPreco}
       />
 
-      <TouchableOpacity style={styles.button}>
+      {/*input do tipo select */}
+
+      <TouchableOpacity style={styles.button} onPress={handleCadastrarLvro}>
         <Text style={styles.buttonText}>Cadastrar Livro</Text>
       </TouchableOpacity>
 
@@ -75,5 +130,5 @@ const styles = StyleSheet.create({
     width: '80%',
     backgroundColor: 'white',
     borderColor: '#ccc',
-  },
+  }
 });

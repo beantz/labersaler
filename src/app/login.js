@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { 
+  Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, View, ActivityIndicator 
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import uuid from 'react-native-uuid';
 
 let ip = "192.168.0.104";
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // Função que é chamada ao clicar em "Entrar"
   const handleLogin = async () => {
+    setIsLoading(true); // Ativa a tela de carregamento
 
     try {
       let response = await fetch(`http://${ip}:3000/login`, {
@@ -26,78 +28,80 @@ const LoginScreen = () => {
         }),
       });
 
-      if(response.ok) {
-
-        router.push('/home');
-
+      if (response.ok) {
+        setTimeout(() => {
+          setIsLoading(false); // Remove a tela de carregamento
+          router.push('/home'); // Navega para a tela inicial
+        }, 2000); // Simulação de processamento
       } else {
-
+        setIsLoading(false);
         let data = await response.json();
-
-        //resgatando os erros retornados no controller caso tiver algum
         if (data.errors) {
-          // Junta todas as mensagens de erro em uma string
           const errorMessages = data.errors.map(err => err.msg).join('\n');
           alert(errorMessages);
-        } 
+        }
       }
-
     } catch (error) {
-      
+      setIsLoading(false);
       alert('Ocorreu um erro ao tentar fazer login.');
-
     }
-
   };
 
   const handleCreateAccount = () => {
-    router.push('/createAccount'); // Navega para a tela de criação de conta
+    router.push('/createAccount');
   };
 
   const handleForgotPassword = () => {
-    router.push('/forgotPassword'); // Navega para a tela de recuperação de senha
+    router.push('/forgotPassword');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.innerContainer}>
-        <MaterialCommunityIcons name="book-open-variant" size={60} color="#007BFF" />
-        <Text style={styles.title}>Laber-Sale</Text>
-        <Text style={styles.title}>Realize seu Login</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Senha"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        
-        {/* Botão para login */}
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Entrar</Text>
-        </TouchableOpacity>
+      {isLoading ? (
+        // Tela de processamento
+        <View style={styles.loadingContainer}>
+          <MaterialCommunityIcons name="book-open-variant" size={60} color='#007BFF' />
+          <Text style={styles.loadingText}>Estamos processando suas informações...</Text>
+          <ActivityIndicator size="large" color="#007BFF" />
+        </View>
+      ) : (
+        // Tela de login
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.innerContainer}>
+          <MaterialCommunityIcons name="book-open-variant" size={60} color='#007BFF' />
+          <Text style={styles.title}>Laber-Sale</Text>
+          <Text style={styles.title}>Realize seu Login</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#666"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Senha"
+            placeholderTextColor="#666"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>Entrar</Text>
+          </TouchableOpacity>
 
-        {/* Link para recuperação de senha */}
-        <TouchableOpacity onPress={handleForgotPassword}>
-          <Text style={styles.link}>Esqueceu a senha?</Text>
-        </TouchableOpacity>
-        
-        {/* Link para criar conta */}
-        <TouchableOpacity onPress={handleCreateAccount}>
-          <Text style={styles.link}>Criar Conta</Text>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+          <TouchableOpacity onPress={handleForgotPassword}>
+            <Text style={styles.link}>Esqueceu a senha?</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={handleCreateAccount}>
+            <Text style={styles.link}>Criar Conta</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 };
@@ -112,6 +116,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: "#fff",
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#333",
+    marginVertical: 10,
   },
   title: {
     fontSize: 26,
@@ -129,11 +146,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 12,
     backgroundColor: '#FFF',
-    color: '#000', // Garante que o texto digitado seja visível
+    color: '#000',
   },
   button: {
     width: '100%',
-    backgroundColor: 'blue', // Cor azul para o botão
+    backgroundColor: '#007BFF',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',

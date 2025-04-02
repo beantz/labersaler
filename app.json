@@ -1,15 +1,16 @@
 {
   "expo": {
-    "name": "liber-sale",
-    "slug": "liber-sale",
+    "name": "libersale",
+    "slug": "libersale",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "liber-sale",
+    "scheme": "libersale",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.beatriz.libersale"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,13 +22,18 @@
           "action": "VIEW",
           "data": [
             {
-              "scheme": "liber-sale",
-              "host": "redefinir-senha"
+              "scheme": "libersale",
+              "host": "redefinir-senha",
+              "pathPrefix": "/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
-      ]
+      ],
+      "package": "com.beatriz.libersale"
     },
     "web": {
       "bundler": "metro",

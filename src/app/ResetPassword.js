@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useRoute } from '@react-navigation/native';
 
 export default function RedefinirSenha() {
   const [novaSenha, setNovaSenha] = useState('');
@@ -28,10 +27,12 @@ export default function RedefinirSenha() {
       router.replace('/login');
 
     } catch (error) {
+      
       Alert.alert('Erro', error.message || 'Falha ao alterar senha');
     }
-  };
+  }; 
 
+  
   return (
     <View style={{ padding: 20 }}>
       <TextInput

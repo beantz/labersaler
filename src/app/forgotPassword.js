@@ -1,6 +1,8 @@
 // app/forgotPassword.js
 import React from 'react';
 import { View, Text, StyleSheet, TextInput, Button } from 'react-native';
+import { router } from 'expo-router';
+import { Alert } from 'react-native';
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState('');
@@ -8,7 +10,6 @@ const ForgotPasswordScreen = () => {
   const handleResetPassword = async () => {
     
     try {
-      
       await fetch('http://192.168.0.104:3000/esqueci-senha', {
         method: 'POST',
         headers: {
@@ -17,7 +18,13 @@ const ForgotPasswordScreen = () => {
         body: JSON.stringify({ email }),
       });
 
-      Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.');
+      Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/verificationScreen', { email }), // Substitui a tela atual
+        },
+      ]);
+
     } catch (error) {
       Alert.alert('Erro', error.response?.data?.error || 'Falha ao enviar email.');
     }

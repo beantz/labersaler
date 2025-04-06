@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CadastroScreen = () => {
   const [name, setName] = useState('');
@@ -9,42 +10,44 @@ const CadastroScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
 
-  let ip = "192.168.0.104";
-
   const handleCadastro = async () => {
 
     try {
-      let response = await fetch(`http://${ip}:3000/cadastro`, {
+      let response = await fetch('http://192.168.0.104:3000/cadastro', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: name,
-          email: email,
-          password: password,
-          confirmPassword: confirmPassword,
+          name,
+          email,
+          password,
+          confirmPassword
         }),
       });
 
-      if(response.ok) {
+      let data = await response.json();
 
-        //retornar para perfil de usuario
-        router.push('/home');
-
-      } else {
-        let data = await response.json();
-
-        //resgatando os erros retornados no controller caso tiver algum
-        if (data.errors) {
-          // Junta todas as mensagens de erro em uma string
-          const errorMessages = data.errors.map(err => err.msg).join('\n');
-          alert(errorMessages);
-        } 
+      if (!response.ok) {
+        // Verifica se há erros e exibe em um Alert
+        if (data.errors && data.errors.length > 0) {
+          const errorMessages = data.errors.map(error => error.msg).join('\n\n');
+          Alert.alert('Erros no formulário', errorMessages);
+        } else {
+          Alert.alert('Erro', 'Ocorreu um erro ao processar o cadastro');
+        }
+        return;
       }
+
+      //retornar para perfil de usuario
+      // const token = response.headers.get('Authorization').split(' ')[1];
+      // await AsyncStorage.setItem('@auth_token', token);
+      //await storeToken(data.token);
+      
+      router.push('/home');
       
     } catch (error) {
-      alert('Ocorreu um erro ao tentar criar sua conta');
+      Alert.alert('Erro', error.message);
     }
   };
 
@@ -95,40 +98,29 @@ const CadastroScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  container: { flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
+    justifyContent: 'center',},
+  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
   input: {
-    width: '100%',
-    height: 50,
+    height: 40,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 15,
+    marginBottom: 5,
+    padding: 10,
+    borderRadius: 5
   },
   button: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#007bff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
+    backgroundColor: '#3498db',
+    padding: 15,
+    borderRadius: 5,
+    marginTop: 10
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold'
+  }
 });
 
 export default CadastroScreen;

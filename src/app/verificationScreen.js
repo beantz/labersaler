@@ -28,16 +28,19 @@ export default function VerificationScreen({ route }) {
 
   const handleVerify = async () => {
     try {
-      const response = await fetch('http://192.168.0.104:3000/redefinir-senha', {
+      const response = await fetch('http://192.168.0.104:3000/validar-codigo', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, token: code })
       });
 
       const data = await response.json();
-      if (response.ok) {
+      if (response.status === 200) {
         // Navegar para tela de nova senha
-        navigation.navigate('ResetPassword', { email });
+        router.replace({ pathname: '/ResetPassword', params: { token: code, email: email }})
+
       } else {
         Alert.alert('Erro', data.error || 'Código inválido');
       }

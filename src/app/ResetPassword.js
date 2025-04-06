@@ -1,20 +1,23 @@
 // screens/RedefinirSenha.js
 import React, { useState } from 'react';
 import { View, TextInput, Button, Alert } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function RedefinirSenha() {
   const [novaSenha, setNovaSenha] = useState('');
   const { token } = useLocalSearchParams();
+  const { email } = useLocalSearchParams();
+
+  let router = useRouter();
 
   const handleRedefinirSenha = async () => {
     try {
-      await fetch('http://192.168.0.104:3000/redefinir-senha', {
+      let response = await fetch('http://192.168.0.104:3000/redefinir-senha', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ token, novaSenha })
+        body: JSON.stringify({ token, novaSenha, email})
       });
       
       if (!response.ok) {

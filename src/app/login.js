@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { 
-  Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, View, ActivityIndicator 
+  Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, View, ActivityIndicator, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-let ip = "192.168.0.104";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +16,7 @@ const LoginScreen = () => {
     setIsLoading(true); // Ativa a tela de carregamento
 
     try {
-      let response = await fetch(`http://${ip}:3000/login`, {
+      let response = await fetch(`http://192.168.0.104:3000/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,19 +27,34 @@ const LoginScreen = () => {
         }),
       });
 
-      if (response.ok) {
-        setTimeout(() => {
-          setIsLoading(false); // Remove a tela de carregamento
-          router.push('/home'); // Navega para a tela inicial
-        }, 2000); // Simulação de processamento
-      } else {
+      let data = await response.json();
+
+      if (!response.ok) {
         setIsLoading(false);
-        let data = await response.json();
+        // Verifica se há erros de validação
         if (data.errors) {
-          const errorMessages = data.errors.map(err => err.msg).join('\n');
-          alert(errorMessages);
+          const errorMessages = data.errors.map(error => error.msg).join('\n\n');
+          Alert.alert('Erros no formulário', errorMessages);
+        } else if (data.error) {
+          // Para erros que vêm como { error: "mensagem" }
+          Alert.alert('Erro', data.error);
+        } else {
+          Alert.alert('Erro', 'Ocorreu um erro ao tentar fazer login');
         }
-      }
+        return;
+
+      } 
+        
+        //await storeToken(data.token);
+
+        setTimeout(() => {
+          setIsLoading(false);
+          // const token = response.headers.get('Authorization').split(' ')[1];
+          // AsyncStorage.setItem('@auth_token', token);
+          
+          router.push('/home');
+        }, 2000);
+
     } catch (error) {
       setIsLoading(false);
       alert('Ocorreu um erro ao tentar fazer login.');

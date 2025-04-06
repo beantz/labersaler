@@ -10,7 +10,7 @@ const ForgotPasswordScreen = () => {
   const handleResetPassword = async () => {
     
     try {
-      await fetch('http://192.168.0.104:3000/esqueci-senha', {
+      let response = await fetch('http://192.168.0.104:3000/esqueci-senha', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -18,15 +18,23 @@ const ForgotPasswordScreen = () => {
         body: JSON.stringify({ email }),
       });
 
-      Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/verificationScreen', { email }), // Substitui a tela atual
-        },
-      ]);
+      if(response.ok){
+        Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.', [
+          {
+            text: 'OK',
+            onPress: () => router.replace({ pathname: '/verificationScreen', params: { email: email }}), //redireciona pra tela de inserir o codigo
+          },
+        ]);
+      } else {
+        
+        let errorData = await response.json();
+        
+        throw new Error(errorData.errors[0].msg || 'Erro desconhecido');
+        
+      }
 
     } catch (error) {
-      Alert.alert('Erro', error.response?.data?.error || 'Falha ao enviar email.');
+      Alert.alert('Erro', error.message);
     }
   };
 

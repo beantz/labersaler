@@ -4,9 +4,10 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CadastroScreen = () => {
-  const [name, setName] = useState('');
+  const [nome, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [senha, setPassword] = useState('');
+  const [contato, setContato] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
 
@@ -19,9 +20,10 @@ const CadastroScreen = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name,
+          nome,
           email,
-          password,
+          senha,
+          contato,
           confirmPassword
         }),
       });
@@ -34,6 +36,7 @@ const CadastroScreen = () => {
           const errorMessages = data.errors.map(error => error.msg).join('\n\n');
           Alert.alert('Erros no formulário', errorMessages);
         } else {
+          console.log(response);
           Alert.alert('Erro', 'Ocorreu um erro ao processar o cadastro');
         }
         return;
@@ -59,7 +62,7 @@ const CadastroScreen = () => {
         style={styles.input}
         placeholder="Nome"
         placeholderTextColor="#666"
-        value={name}
+        value={nome}
         onChangeText={setName}
       />
 
@@ -74,10 +77,21 @@ const CadastroScreen = () => {
 
       <TextInput
         style={styles.input}
+        placeholder="Número de Contato"
+        placeholderTextColor="#666"
+        keyboardType="phone-pad"  // Teclado numérico para telefones
+        value={contato}
+        onChangeText={setContato}
+        maxLength={15}  // Limite razoável para números com DDD e código de país
+        autoComplete="tel"  // Autocompletar para números de telefone
+      />
+
+      <TextInput
+        style={styles.input}
         placeholder="Senha"
         placeholderTextColor="#666"
         secureTextEntry
-        value={password}
+        value={senha}
         onChangeText={setPassword}
       />
 

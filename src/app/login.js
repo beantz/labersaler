@@ -5,6 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '/home/beatrizm/Documentos/js/labersaler/services/api.js';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -13,51 +14,51 @@ const LoginScreen = () => {
   const router = useRouter();
 
   const handleLogin = async () => {
-    setIsLoading(true); // Ativa a tela de carregamento
-
+    setIsLoading(true);
+  
     try {
-      let response = await fetch(`http://192.168.0.104:3000/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
+      const response = await api.post('/login', { 
+        email, 
+        password 
+      }, {
+        timeout: 10000 // 10 segundos de timeout
       });
+  
+      // Verificação mais segura
+      if (response.data?.token) {
 
-      let data = await response.json();
+        await AsyncStorage.setItem('@auth_token', response.data.token);
+        router.push('/home');
 
-      if (!response.ok) {
-        setIsLoading(false);
-        // Verifica se há erros de validação
-        if (data.errors) {
-          const errorMessages = data.errors.map(error => error.msg).join('\n\n');
-          Alert.alert('Erros no formulário', errorMessages);
-        } else if (data.error) {
-          // Para erros que vêm como { error: "mensagem" }
-          Alert.alert('Erro', data.error);
-        } else {
-          Alert.alert('Erro', 'Ocorreu um erro ao tentar fazer login');
-        }
-        return;
-
-      } 
-        
-        //await storeToken(data.token);
-
-        setTimeout(() => {
-          setIsLoading(false);
-          // const token = response.headers.get('Authorization').split(' ')[1];
-          // AsyncStorage.setItem('@auth_token', token);
-          
-          router.push('/home');
-        }, 2000);
-
+      } else {
+        throw new Error('Resposta inesperada do servidor');
+      }
+  
     } catch (error) {
       setIsLoading(false);
-      alert('Ocorreu um erro ao tentar fazer login.');
+    
+      let errorMessage = 'Erro desconhecido';
+  
+      // Erros de rede/timeout
+      if (error.code === 'ECONNABORTED' || !error.response) {
+        errorMessage = 'Servidor não respondeu. Verifique sua conexão.';
+      }
+      // Erros de validação (400)
+      else if (error.response?.status === 400) {
+        if (error.response.data?.errors) {
+          errorMessage = error.response.data.errors
+            .map(err => `• ${err.msg || err.message}`)
+            .join('\n');
+        } else {
+          errorMessage = error.response.data?.message || 'Dados inválidos';
+        }
+      }
+      // Outros erros HTTP
+      else if (error.response?.status) {
+        errorMessage = error.response.data?.message || `Erro ${error.response.status}`;
+      }
+  
+      Alert.alert('Erro', errorMessage);
     }
   };
 

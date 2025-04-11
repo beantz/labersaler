@@ -4,11 +4,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
+  StyleSheet, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import ModalDropdown from 'react-native-modal-dropdown';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
+import api from '/home/beatrizm/Documentos/js/labersaler/services/api.js';
 
 export default function CadastroLivro() {
   const [titulo, setTitulo] = useState('');
@@ -19,7 +20,7 @@ export default function CadastroLivro() {
   const [categoria, setCategoria] = useState('');
 
   const router = useRouter();
-  const ip = "192.168.0.104";
+  const ip = "192.168.0.105";
 
   const estadosLivro = ['Novo', 'Usado - Bom', 'Usado - Regular', 'Usado - Ruim'];
   const categorias = [
@@ -33,32 +34,52 @@ export default function CadastroLivro() {
     'Literatura Infantil'
   ];
 
+
   const handleCadastrarLivro = async () => {
     try {
-      let response = await fetch(`http://${ip}:3000/livros/cadastrar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          titulo,
-          autor,
-          preco,
-          estado,
-          descricao,
-          categoria,
-        }),
+      const response = await api.post('/livros/cadastrar', {
+        titulo,
+        autor,
+        preco,
+        estado,
+        descricao,
+        categoria,
       });
 
-      if (response.ok) {
+      if (response.data && response.data.message) {
+        Alert.alert('Sucesso', response.data.message);
+        console.log('AAAAA', response.data);
         router.push('/home');
-      } else {
-        let data = await response.json();
-        if (data.errors) {
-          const errorMessages = data.errors.map(err => err.msg).join('\n');
-          alert(errorMessages);
-        }
       }
+
     } catch (error) {
-      alert('Erro ao cadastrar o livro.');
+      console.log('Erro completo:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+
+      // Tratamento de erros de validação (422)
+      if (error.response?.status === 422 && error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorMessage = validationErrors.map(err => `• ${err.message}`).join('\n');
+        Alert.alert('Erros no formulário', errorMessage);
+      }
+      // Tratamento de erros de autenticação (401)
+      else if (error.response?.status === 401) {
+        Alert.alert('Erro de autenticação', error.response.data?.message || 'Sessão expirada');
+        // Opcional: limpar token e redirecionar para login
+        await AsyncStorage.removeItem('@auth_token');
+        router.push('/login');
+      }
+      // Outros erros do servidor
+      else if (error.response?.data?.message) {
+        Alert.alert('Erro', error.response.data.message);
+      }
+      // Erros de conexão
+      else {
+        Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
+      }
     }
   };
 

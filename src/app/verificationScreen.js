@@ -33,7 +33,7 @@ export default function VerificationScreen({ route }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, token: code })
+        body: JSON.stringify({ email, token: code, email: email})
       });
 
       const data = await response.json();

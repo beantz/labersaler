@@ -14,7 +14,7 @@ const CadastroScreen = () => {
   const handleCadastro = async () => {
 
     try {
-      let response = await fetch('http://192.168.0.104:3000/cadastro', {
+      let response = await fetch('http://192.168.0.105:3000/cadastro', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,16 +36,12 @@ const CadastroScreen = () => {
           const errorMessages = data.errors.map(error => error.msg).join('\n\n');
           Alert.alert('Erros no formulário', errorMessages);
         } else {
-          console.log(response);
-          Alert.alert('Erro', 'Ocorreu um erro ao processar o cadastro');
+          
+          Alert.alert('Erro', data.message);
+          
         }
         return;
       }
-
-      //retornar para perfil de usuario
-      // const token = response.headers.get('Authorization').split(' ')[1];
-      // await AsyncStorage.setItem('@auth_token', token);
-      //await storeToken(data.token);
       
       router.push('/home');
       

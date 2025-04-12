@@ -28,7 +28,7 @@ export default function VerificationScreen({ route }) {
 
   const handleVerify = async () => {
     try {
-      const response = await fetch('http://192.168.0.104:3000/validar-codigo', {
+      const response = await fetch('http://192.168.0.105:3000/validar-codigo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

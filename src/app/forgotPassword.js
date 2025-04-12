@@ -10,7 +10,7 @@ const ForgotPasswordScreen = () => {
   const handleResetPassword = async () => {
     
     try {
-      let response = await fetch('http://192.168.0.104:3000/esqueci-senha', {
+      let response = await fetch('http://192.168.0.105:3000/esqueci-senha', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

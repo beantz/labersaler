@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet, Alert
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView} from 'react-native';
 import { useRouter } from 'expo-router';
 import ModalDropdown from 'react-native-modal-dropdown';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
@@ -53,12 +47,46 @@ export default function CadastroLivro() {
       }
 
     } catch (error) {
-      console.log('Erro completo:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
+      //tratando erros de select
+      if (error.response?.data?.errors) {
+          
+        const fieldNames = {
+          titulo: 'Título',
+          autor: 'Autor',
+          preco: 'Preço',
+          estado: 'Estado do Livro',
+          categoria: 'Categoria',
+          descricao: 'Descrição'
+        };
+  
+        // Agrupa erros por campo para evitar múltiplos alerts
+        const errorsByField = {};
+        error.response.data.errors.forEach(err => {
+          if (!errorsByField[err.field]) {
+            errorsByField[err.field] = [];
+          }
+          errorsByField[err.field].push(err.message);
+        });
+  
+        // Exibe um alerta por campo com todas as mensagens
+        Object.entries(errorsByField).forEach(([field, messages]) => {
+          Alert.alert(
+            `Erro no ${fieldNames[field] || field}`,
+            messages.join('\n\n')
+          );
+        });
+  
+        } else if (error.response?.status === 401) {
+          // Tratamento para erros de autenticação
+          Alert.alert('Erro de autenticação', 'Sessão expirada. Faça login novamente.');
+          await AsyncStorage.removeItem('@auth_token');
+          router.push('/login');
 
+        } else {
+          Alert.alert('Erro', error.message || 'Erro ao cadastrar livro');
+        }
+      };
+    
       // Tratamento de erros de validação (422)
       if (error.response?.status === 422 && error.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
@@ -81,99 +109,102 @@ export default function CadastroLivro() {
         Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
       }
     }
-  };
+
 
   const handleVoltarHome = () => router.push('/home');
   const handleIrParaPerfil = () => router.push('/perfil');
 
   return (
-    <View style={styles.container}>
-      {/* Barra superior */}
-      <View style={styles.topBar}>
-        <Text style={styles.logo}>LiberSale</Text>
+    <ScrollView>
+      <View style={styles.container}>
+        {/* Barra superior */}
+        <View style={styles.topBar}>
+          <Text style={styles.logo}>LiberSale</Text>
+        </View>
+
+        <View style={styles.innerContainer}>
+          <Text style={styles.header}>Cadastro de Livro</Text>
+
+          <TextInput
+            placeholder="Título do Livro"
+            style={styles.input}
+            onChangeText={setTitulo}
+            value={titulo}
+            placeholderTextColor="#999"
+          />
+          <TextInput
+            placeholder="Autor do Livro"
+            style={styles.input}
+            onChangeText={setAutor}
+            value={autor}
+            placeholderTextColor="#999"
+          />
+          <TextInput
+            placeholder="Preço"
+            keyboardType="numeric"
+            style={styles.input}
+            onChangeText={setPreco}
+            value={preco}
+            placeholderTextColor="#999"
+          />
+          <TextInput
+            placeholder="Descrição"
+            style={[styles.input, { height: 80 }]}
+            onChangeText={setDescricao}
+            value={descricao}
+            multiline
+            placeholderTextColor="#999"
+          />
+
+          <ModalDropdown
+            options={estadosLivro}
+            defaultValue="Selecione o estado do livro"
+            style={styles.dropdown}
+            textStyle={styles.dropdownText}
+            dropdownStyle={styles.dropdownList}
+            onSelect={(index, value) => setEstado(value)}
+          />
+
+          <ModalDropdown
+            options={categorias}
+            defaultValue="Selecione a categoria"
+            style={styles.dropdown}
+            textStyle={styles.dropdownText}
+            dropdownStyle={styles.dropdownList}
+            onSelect={(index, value) => setCategoria(value)}
+          />
+
+          <TouchableOpacity style={styles.button} onPress={handleCadastrarLivro}>
+            <Text style={styles.buttonText}>Cadastrar Livro</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleVoltarHome} style={styles.buttonSecundario}>
+            <Text style={styles.buttonText}>Voltar para Home</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Barra inferior */}
+        <View style={styles.bottomBar}>
+          <TouchableOpacity onPress={handleVoltarHome} style={styles.iconContainer}>
+            <Entypo name="home" size={24} color="#fff" />
+            <Text style={styles.iconText}>Início</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleIrParaPerfil} style={styles.iconContainer}>
+            <Ionicons name="person-circle-outline" size={24} color="#fff" />
+            <Text style={styles.iconText}>Perfil</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity disabled style={styles.iconContainer}>
+            <MaterialIcons name="add-box" size={24} color="#ccc" />
+            <Text style={[styles.iconText, { color: '#ccc' }]}>Vender Livro</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <View style={styles.innerContainer}>
-        <Text style={styles.header}>Cadastro de Livro</Text>
-
-        <TextInput
-          placeholder="Título do Livro"
-          style={styles.input}
-          onChangeText={setTitulo}
-          value={titulo}
-          placeholderTextColor="#999"
-        />
-        <TextInput
-          placeholder="Autor do Livro"
-          style={styles.input}
-          onChangeText={setAutor}
-          value={autor}
-          placeholderTextColor="#999"
-        />
-        <TextInput
-          placeholder="Preço"
-          keyboardType="numeric"
-          style={styles.input}
-          onChangeText={setPreco}
-          value={preco}
-          placeholderTextColor="#999"
-        />
-        <TextInput
-          placeholder="Descrição"
-          style={[styles.input, { height: 80 }]}
-          onChangeText={setDescricao}
-          value={descricao}
-          multiline
-          placeholderTextColor="#999"
-        />
-
-        <ModalDropdown
-          options={estadosLivro}
-          defaultValue="Selecione o estado do livro"
-          style={styles.dropdown}
-          textStyle={styles.dropdownText}
-          dropdownStyle={styles.dropdownList}
-          onSelect={(index, value) => setEstado(value)}
-        />
-
-        <ModalDropdown
-          options={categorias}
-          defaultValue="Selecione a categoria"
-          style={styles.dropdown}
-          textStyle={styles.dropdownText}
-          dropdownStyle={styles.dropdownList}
-          onSelect={(index, value) => setCategoria(value)}
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleCadastrarLivro}>
-          <Text style={styles.buttonText}>Cadastrar Livro</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleVoltarHome} style={styles.buttonSecundario}>
-          <Text style={styles.buttonText}>Voltar para Home</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Barra inferior */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={handleVoltarHome} style={styles.iconContainer}>
-          <Entypo name="home" size={24} color="#fff" />
-          <Text style={styles.iconText}>Início</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleIrParaPerfil} style={styles.iconContainer}>
-          <Ionicons name="person-circle-outline" size={24} color="#fff" />
-          <Text style={styles.iconText}>Perfil</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity disabled style={styles.iconContainer}>
-          <MaterialIcons name="add-box" size={24} color="#ccc" />
-          <Text style={[styles.iconText, { color: '#ccc' }]}>Vender Livro</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#8B008B' },

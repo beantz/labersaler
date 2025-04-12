@@ -12,21 +12,28 @@ export default function RedefinirSenha() {
 
   const handleRedefinirSenha = async () => {
     try {
-      let response = await fetch('http://192.168.0.104:3000/redefinir-senha', {
+      let response = await fetch('http://192.168.0.105:3000/redefinir-senha', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ token, novaSenha, email})
       });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao alterar senha');
-      }
 
       const data = await response.json();
-      
-      Alert.alert('Sucesso', data.message || 'Senha alterada com sucesso!');
+
+      if (!response.ok) {
+        // Trata erros de validação
+        if (data.errors) {
+          const errorMessages = data.errors.map(e => e.message).join('\n');
+          Alert.alert('Erro', errorMessages);
+        } else {
+          throw new Error(data.error || 'Falha ao alterar senha');
+        }
+        return;
+      }
+  
+      Alert.alert('Sucesso', data.message);
       router.replace('/login');
 
     } catch (error) {

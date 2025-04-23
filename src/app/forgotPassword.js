@@ -1,42 +1,62 @@
 // app/forgotPassword.js
 import React from 'react';
-import { View, Text, StyleSheet, TextInput, Button } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Button, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
+import api from '../services/api.js';
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
   const handleResetPassword = async () => {
-    
+    setLoading(true);
     try {
-      let response = await fetch('http://192.168.0.105:3000/esqueci-senha', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      let response = await api.post('/esqueci-senha', { email });
 
-      if(response.ok){
+       // Verifica se a requisição foi bem-sucedida (status 2xx)
+       if (response.status >= 200 && response.status < 300) {
         Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.', [
-          {
-            text: 'OK',
-            onPress: () => router.replace({ pathname: '/verificationScreen', params: { email: email }}), //redireciona pra tela de inserir o codigo
-          },
+            {
+                text: 'OK',
+                onPress: () => router.replace({ 
+                    pathname: '/verificationScreen', 
+                    params: { email: email }
+                }),
+            },
         ]);
-      } else {
-        
-        let errorData = await response.json();
-        
-        throw new Error(errorData.errors[0].msg || 'Erro desconhecido');
-        
-      }
-
+        } else {
+            // Se a API retornar um erro com corpo JSON
+            const errorData = response.data || {};
+            const errorMessage = errorData.errors?.[0]?.msg || 
+                                errorData.message || 
+                                'Erro ao processar solicitação';
+            throw new Error(errorMessage);
+        }
     } catch (error) {
-      Alert.alert('Erro', error.message);
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const fieldErrors = {};
+  
+        error.response.data.errors.forEach(err => {
+          if (!fieldErrors[err.path]) {
+            fieldErrors[err.path] = [];
+          }
+          fieldErrors[err.path].push(err.msg);
+        });
+      
+        // Mostra apenas o primeiro erro do primeiro campo com erro
+        const firstField = Object.keys(fieldErrors)[0];
+        Alert.alert(
+          firstField === 'email' ? 'Erro no email' : 'Erro no formulário',
+          fieldErrors[firstField][0]
+        );
+      } else {
+        Alert.alert('Erro', error.message || 'Erro ao tentar redefinir a senha');
+      }
+    } finally {
+      setLoading(false);
     }
-  };
+};
 
   return (
     <View style={styles.container}>

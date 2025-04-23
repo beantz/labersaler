@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import ModalDropdown from 'react-native-modal-dropdown';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
-import api from '/home/beatrizm/Documentos/js/labersaler/services/api.js';
+import api from '../services/api.js';
 
 export default function CadastroLivro() {
   const [titulo, setTitulo] = useState('');
@@ -11,23 +11,41 @@ export default function CadastroLivro() {
   const [preco, setPreco] = useState('');
   const [estado, setEstado] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [categorias, setCategorias] = useState([]); // Array vazio
+  const [loading, setLoading] = useState(false);
 
   const router = useRouter();
-  const ip = "192.168.0.105";
 
   const estadosLivro = ['Novo', 'Usado - Bom', 'Usado - Regular', 'Usado - Ruim'];
-  const categorias = [
-    'Fantasia',
-    'Romance',
-    'Terror / Suspense / Mistério',
-    'Ficção Científica',
-    'Histórico',
-    'Autobiografias e Biografias',
-    'Autoajuda',
-    'Literatura Infantil'
-  ];
 
+  useEffect(() => {
+    const fetchCategorias = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/categorias');
+        const receivedData = response.data?.data || response.data || [];
+        
+        // Garante que temos um array de categorias com id e nome
+        const safeCategories = receivedData.map(item => ({
+          id: String(item.id), // Garante que id é string
+          nome: String(item.nome || item.title || 'Sem nome')
+        }));
+        
+        setCategorias(safeCategories);
+      } catch (error) {
+        console.error('Erro ao buscar categorias:', error);
+        if (error.response?.status === 401) {
+          Alert.alert('Sessão expirada', 'Por favor, faça login novamente');
+          await AsyncStorage.removeItem('@auth_token');
+          router.replace('/login');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategorias();
+  }, []);
 
   const handleCadastrarLivro = async () => {
     try {
@@ -37,66 +55,49 @@ export default function CadastroLivro() {
         preco,
         estado,
         descricao,
-        categoria,
+        categoria_id: selectedCategoryName
       });
-
+  
       if (response.data && response.data.message) {
         Alert.alert('Sucesso', response.data.message);
-        console.log('AAAAA', response.data);
         router.push('/home');
       }
-
+  
     } catch (error) {
-      //tratando erros de select
-      if (error.response?.data?.errors) {
-          
+      console.error('Erro ao cadastrar livro:', error);
+      
+      // Tratamento para erros de validação (400)
+      if (error.response?.status === 400 && error.response?.data?.errors) {
         const fieldNames = {
           titulo: 'Título',
           autor: 'Autor',
           preco: 'Preço',
           estado: 'Estado do Livro',
-          categoria: 'Categoria',
+          categoria_id: 'Categoria',
           descricao: 'Descrição'
         };
   
-        // Agrupa erros por campo para evitar múltiplos alerts
-        const errorsByField = {};
-        error.response.data.errors.forEach(err => {
-          if (!errorsByField[err.field]) {
-            errorsByField[err.field] = [];
-          }
-          errorsByField[err.field].push(err.message);
+        // Mapeia os erros para um formato mais amigável
+        const errorMessages = error.response.data.errors.map(err => {
+          const fieldName = fieldNames[err.path] || err.path;
+          return ` ${fieldName}: ${err.msg}`;
         });
   
-        // Exibe um alerta por campo com todas as mensagens
-        Object.entries(errorsByField).forEach(([field, messages]) => {
-          Alert.alert(
-            `Erro no ${fieldNames[field] || field}`,
-            messages.join('\n\n')
-          );
-        });
-  
-        } else if (error.response?.status === 401) {
-          // Tratamento para erros de autenticação
-          Alert.alert('Erro de autenticação', 'Sessão expirada. Faça login novamente.');
-          await AsyncStorage.removeItem('@auth_token');
-          router.push('/login');
-
-        } else {
-          Alert.alert('Erro', error.message || 'Erro ao cadastrar livro');
-        }
-      };
-    
-      // Tratamento de erros de validação (422)
-      if (error.response?.status === 422 && error.response?.data?.errors) {
-        const validationErrors = error.response.data.errors;
-        const errorMessage = validationErrors.map(err => `• ${err.message}`).join('\n');
-        Alert.alert('Erros no formulário', errorMessage);
+        Alert.alert(
+          'Erros no formulário',
+          errorMessages.join('\n\n')
+        );
       }
-      // Tratamento de erros de autenticação (401)
+      // Tratamento para categoria não encontrada
+      else if (error.response?.status === 400 && error.response?.data?.categorias_disponiveis) {
+        Alert.alert(
+          'Categoria não encontrada',
+          `${error.response.data.message}\n\nCategorias disponíveis:\n${error.response.data.categorias_disponiveis.join('\n')}`
+        );
+      }
+      // Tratamento para erros de autenticação (401)
       else if (error.response?.status === 401) {
-        Alert.alert('Erro de autenticação', error.response.data?.message || 'Sessão expirada');
-        // Opcional: limpar token e redirecionar para login
+        Alert.alert('Erro de autenticação', 'Sessão expirada. Faça login novamente.');
         await AsyncStorage.removeItem('@auth_token');
         router.push('/login');
       }
@@ -109,10 +110,12 @@ export default function CadastroLivro() {
         Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
       }
     }
-
+  };
 
   const handleVoltarHome = () => router.push('/home');
   const handleIrParaPerfil = () => router.push('/perfil');
+
+  const [selectedCategoryName, setSelectedCategoryName] = useState('');
 
   return (
     <ScrollView>
@@ -166,12 +169,19 @@ export default function CadastroLivro() {
           />
 
           <ModalDropdown
-            options={categorias}
+            options={
+              categorias.length > 0
+                ? categorias.map(cat => cat.nome)
+                : ['Carregando categorias...']
+            }
             defaultValue="Selecione a categoria"
             style={styles.dropdown}
             textStyle={styles.dropdownText}
             dropdownStyle={styles.dropdownList}
-            onSelect={(index, value) => setCategoria(value)}
+            onSelect={(index, value) => {
+              setSelectedCategoryName(value); // Armazena apenas o nome da categoria
+            }}
+            disabled={loading}
           />
 
           <TouchableOpacity style={styles.button} onPress={handleCadastrarLivro}>

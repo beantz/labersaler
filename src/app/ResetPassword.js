@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import api from '../services/api.js';
 
 export default function RedefinirSenha() {
   const [novaSenha, setNovaSenha] = useState('');
@@ -12,35 +13,69 @@ export default function RedefinirSenha() {
 
   const handleRedefinirSenha = async () => {
     try {
-      let response = await fetch('http://192.168.0.105:3000/redefinir-senha', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ token, novaSenha, email})
+      let response = await api.post('/redefinir-senha', {
+        token, 
+        novaSenha, 
+        email
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Trata erros de validação
-        if (data.errors) {
-          const errorMessages = data.errors.map(e => e.message).join('\n');
-          Alert.alert('Erro', errorMessages);
-        } else {
-          throw new Error(data.error || 'Falha ao alterar senha');
-        }
+      if (response.data?.success) {
+        Alert.alert('Sucesso', 'Senha redefinida com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/login')
+          }
+        ]);
         return;
       }
-  
-      Alert.alert('Sucesso', data.message);
-      router.replace('/login');
+
+      // Tratamento de erros de validação (400)
+      if (response.status === 400 && response.data?.errors) {
+        const firstError = response.data.errors[0];
+        Alert.alert(
+          `Erro no ${firstError.field === 'novaSenha' ? 'senha' : firstError.field}`,
+          firstError.message
+        );
+        return;
+      }
+
+      // Tratamento de outros erros (404, 500, etc.)
+      throw new Error(response.data?.error || 'Falha ao alterar senha');
+
 
     } catch (error) {
       
-      Alert.alert('Erro', error.message || 'Falha ao alterar senha');
-    }
-  }; 
+      console.error('Erro na redefinição:', error);
+
+      if (error.response) {
+        // Erro com resposta do servidor (4xx, 5xx)
+        const errorData = error.response.data || {};
+        
+        if (error.response.status === 400 && errorData.errors) {
+          // Erros de validação (array de erros)
+          const errorMessages = errorData.errors.map(err => `• ${err.message}`).join('\n');
+          Alert.alert('Erro no formulário', errorMessages);
+    
+      // Tratamento especial para erros de rede/axios
+      if (error.response?.data?.errors) {
+        const firstError = error.response.data.errors[0];
+        Alert.alert(
+          `Erro no ${firstError.field === 'novaSenha' ? 'senha' : firstError.field}`,
+          firstError.message
+        );
+
+      } else {
+        Alert.alert(
+          'Erro', 
+          error.message === 'Usuário não encontrado' 
+            ? 'Email não cadastrado no sistema'
+            : error.message || 'Erro ao processar sua solicitação'
+        );
+      }
+    };
+  }
+} 
+}
 
   
   return (

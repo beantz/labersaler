@@ -5,7 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '/home/beatrizm/Documentos/js/labersaler/services/api.js';
+import api from '../services/api.js';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -47,7 +47,7 @@ const LoginScreen = () => {
       else if (error.response?.status === 400) {
         if (error.response.data?.errors) {
           errorMessage = error.response.data.errors
-            .map(err => `• ${err.msg || err.message}`)
+            .map(err => `${err.msg || err.message}`)
             .join('\n');
         } else {
           errorMessage = error.response.data?.message || 'Dados inválidos';

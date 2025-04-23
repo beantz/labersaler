@@ -1,66 +1,84 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  Image,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Image, Modal, KeyboardAvoidingView, Platform} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-
-const livrosMock = [
-  { id: '1', nome: 'Dom Casmurro', autor: 'Machado de Assis', preco: 'R$ 20,00', categoria: 'Romance', imagem: 'https://via.placeholder.com/80' },
-  { id: '2', nome: 'Harry Potter', autor: 'J.K. Rowling', preco: 'R$ 35,00', categoria: 'Fantasia', imagem: 'https://via.placeholder.com/80' },
-  { id: '3', nome: 'O Hobbit', autor: 'Tolkien', preco: 'R$ 30,00', categoria: 'Fantasia', imagem: 'https://via.placeholder.com/80' },
-];
-
-const categorias = [
-  'Fantasia',
-  'Romance',
-  'Terror /Suspense/Mistério',
-  'Ficção Científica',
-  'Histórico',
-  'Autobiografias e Biografias',
-  'Autoajuda',
-  'Literatura Infantil',
-];
+import api from '../services/api.js';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function HomePage() {
   const router = useRouter();
   const [busca, setBusca] = useState('');
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [categorias, setCategorias] = useState([]);
+  const [livros, setLivros] = useState([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
 
-  const handleCadastro = () => router.push('/createLivro');
+  const handleCadastro = () => router.push('/cadastroLivro');
   const handlePerfil = () => router.push('/perfil');
   const handleHome = () => router.push('/home');
 
-  const livrosFiltrados = livrosMock.filter((livro) => {
+  //método adaptado para buscar categorias e livros juntos
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriasResponse, livrosResponse] = await Promise.all([
+          api.get('/categorias'),
+          api.get('/livros')
+        ]);
+        
+        setCategorias(categoriasResponse.data.data);
+        setLivros(livrosResponse.data.books);
+      } catch (error) {
+        if (error.response?.status === 401) {
+          Alert.alert('Sessão expirada', 'Por favor, faça login novamente');
+          await AsyncStorage.removeItem('@auth_token');
+          router.replace('/login');
+        } else {
+          Alert.alert('Erro', 'Falha ao carregar dados');
+        }
+        console.error('Erro ao buscar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const livrosFiltrados = livros.filter((livro) => {
     const buscaLower = busca.toLowerCase();
     const correspondeBusca =
-      livro.nome.toLowerCase().includes(buscaLower) ||
+      livro.titulo.toLowerCase().includes(buscaLower) ||
       livro.autor.toLowerCase().includes(buscaLower);
 
     const correspondeCategoria =
-      categoriaSelecionada === '' || livro.categoria === categoriaSelecionada;
+      categoriaSelecionada === '' || 
+      (livro.categorias && livro.categorias.some(cat => cat.nome === categoriaSelecionada));
 
     return correspondeBusca && correspondeCategoria;
   });
-
+  
   const renderLivro = ({ item }) => (
-    <View style={styles.livroItem}>
-      <Image source={{ uri: item.imagem }} style={styles.livroImagem} />
-      <View>
-        <Text style={styles.livroNome}>{item.nome}</Text>
-        <Text style={styles.livroPreco}>{item.preco}</Text>
+    <TouchableOpacity 
+      style={styles.livroItem}
+      onPress={() => router.push(`/livro/${item.id}`)}
+    >
+      {/* Substitui a imagem por um ícone padrão */}
+      <View style={styles.livroIconContainer}>
+        <FontAwesome name="book" size={40} color="#6A006A" />
       </View>
-    </View>
+      
+      <View style={styles.livroInfo}>
+        <Text style={styles.livroNome}>{item.titulo}</Text>
+        <Text style={styles.livroAutor}>{item.autor}</Text>
+        <Text style={styles.livroPreco}>R$ {item.preco.toFixed(2)}</Text>
+        {item.categorias && (
+          <Text style={styles.livroCategoria}>
+            {item.categorias.map(c => c.nome).join(', ')}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -279,5 +297,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginTop: 2,
+  },
+  livroIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: '#F0E6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  livroInfo: {
+    flex: 1,
+  },
+  livroNome: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  livroAutor: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  livroPreco: {
+    fontSize: 14,
+    color: '#6A006A',
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  livroCategoria: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { View, Text, Alert } from 'react-native';
 import { CodeField } from 'react-native-confirmation-code-field';
+import api from '../services/api.js';
 
 export default function VerificationScreen({ route }) {
   const [code, setCode] = useState('');
@@ -28,25 +29,54 @@ export default function VerificationScreen({ route }) {
 
   const handleVerify = async () => {
     try {
-      const response = await fetch('http://192.168.0.105:3000/validar-codigo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, token: code, email: email})
-      });
-
-      const data = await response.json();
-      if (response.status === 200) {
-        // Navegar para tela de nova senha
-        router.replace({ pathname: '/ResetPassword', params: { token: code, email: email }})
-
-      } else {
-        Alert.alert('Erro', data.error || 'Código inválido');
+      if (!code || code.length < 6) {
+        Alert.alert('Erro', 'Por favor, preencha todos os dígitos do código');
+        return;
       }
+  
+      const response = await api.post('/validar-codigo', {
+        token: code, 
+        email: email
+      });
+  
+      if (response.status === 200) {
+        router.replace({ 
+          pathname: '/ResetPassword', 
+          params: { token: code, email: email }
+        });
+        return;
+      }
+  
+      // Tratamento de erros específicos
+      const errorData = response.data || {};
+      Alert.alert('Erro', errorData.error || 'Erro ao validar código');
+  
     } catch (error) {
-
-      Alert.alert('Erro', 'Falha na conexão');
+      console.error('Erro na verificação:', error);
+      
+      if (error.response) {
+        const errorData = error.response.data || {};
+        
+        if (error.response.status === 400) {
+          if (errorData.error === 'Código inválido') {
+            Alert.alert(
+              'Código Inválido', 
+              'O código digitado está incorreto. Verifique e tente novamente.'
+            );
+          } else if (errorData.error === 'Código expirado') {
+            Alert.alert(
+              'Código Expirado', 
+              'Este código já expirou. Solicite um novo código.'
+            );
+          } else {
+            Alert.alert('Erro', errorData.error || 'Erro na validação');
+          }
+        } else {
+          Alert.alert('Erro', errorData.error || 'Erro ao validar código');
+        }
+      } else {
+        Alert.alert('Erro', 'Falha na conexão com o servidor');
+      }
     }
   };
 

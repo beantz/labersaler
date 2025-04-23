@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api.js';
 
 const CadastroScreen = () => {
   const [nome, setName] = useState('');
@@ -12,41 +13,38 @@ const CadastroScreen = () => {
   const router = useRouter();
 
   const handleCadastro = async () => {
-
     try {
-      let response = await fetch('http://192.168.0.105:3000/cadastro', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nome,
-          email,
-          senha,
-          contato,
-          confirmPassword
-        }),
+      const response = await api.post('/cadastro', {
+        nome,
+        email,
+        senha,
+        confirmPassword,
+        contato
       });
-
-      let data = await response.json();
-
-      if (!response.ok) {
-        // Verifica se há erros e exibe em um Alert
-        if (data.errors && data.errors.length > 0) {
-          const errorMessages = data.errors.map(error => error.msg).join('\n\n');
-          Alert.alert('Erros no formulário', errorMessages);
-        } else {
-          
-          Alert.alert('Erro', data.message);
-          
-        }
-        return;
-      }
-      
-      router.push('/home');
-      
+  
+      // Se chegou aqui, cadastro foi bem-sucedido
+      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+      router.push('/login');
+  
     } catch (error) {
-      Alert.alert('Erro', error.message);
+      // Tratamento específico para erros de validação (400)
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+  
+        // Processa os erros para exibição
+        const errorMessages = error.response.data.errors.map(err => {
+          // const fieldName = fieldNames[err.field] || err.field;
+          return ` ${err.message}`;
+        }).join('\n\n');
+  
+        Alert.alert('Erros no formulário', errorMessages);
+  
+      } 
+      // Tratamento para outros tipos de erro
+      else {
+        const errorMessage = error.response?.data?.message || 
+                           'Erro ao processar o cadastro. Tente novamente.';
+        Alert.alert('Erro', errorMessage);
+      }
     }
   };
 

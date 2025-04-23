@@ -1,6 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+//Cuida de toda essa parte de lidar com as rotas autenticadas e tokens
+
 const api = axios.create({
   baseURL: 'http://192.168.0.105:3000',
   timeout: 10000, 
@@ -24,10 +26,15 @@ api.interceptors.request.use(config => {
 
 // Adiciona token JWT automaticamente
 api.interceptors.request.use(async (config) => {
+
   const token = await AsyncStorage.getItem('@auth_token');
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  console.log(`token recebido: ${token}`);
+
   return config;
 }, (error) => {
   console.log('[Token Error]', error);
@@ -50,12 +57,23 @@ api.interceptors.response.use(response => {
 
   // Tratamento específico para token expirado
   if (error.response?.status === 401) {
-    await AsyncStorage.removeItem('@auth_token');
-    // Adicione aqui qualquer redirecionamento global se necessário
-  }
+    const errorMessage = error.response?.data?.message;
 
-  // Mantém o fluxo de erro para ser tratado localmente
-  return Promise.reject(error);
-});
+    // Se foi um logout intencional, não limpe o token automaticamente
+    if (errorMessage.includes('logout realizado')) {
+      console.log('Logout intencional - mantendo estado');
+    } else {
+      // Para outros casos de 401 (token expirado, inválido, etc.)
+      await AsyncStorage.removeItem('@auth_token');
+      delete api.defaults.headers.common['Authorization'];
+      
+    }
+    }
+
+    // Mantém o fluxo de erro para ser tratado localmente
+    return Promise.reject(error);
+   }
+  
+);
 
 export default api;

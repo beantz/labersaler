@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import ModalDropdown from 'react-native-modal-dropdown';
+// import ModalDropdown from 'react-native-modal-dropdown';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import api from '../services/api.js';
 
@@ -13,6 +14,8 @@ export default function CadastroLivro() {
   const [descricao, setDescricao] = useState('');
   const [categorias, setCategorias] = useState([]); // Array vazio
   const [loading, setLoading] = useState(false);
+  const [openEstado, setOpenEstado] = useState(false);
+  const [openCategoria, setOpenCategoria] = useState(false);
 
   const router = useRouter();
 
@@ -80,7 +83,8 @@ export default function CadastroLivro() {
         // Mapeia os erros para um formato mais amigável
         const errorMessages = error.response.data.errors.map(err => {
           const fieldName = fieldNames[err.path] || err.path;
-          return ` ${fieldName}: ${err.msg}`;
+          return ` ${err.msg}`;
+          //` ${fieldName}:
         });
   
         Alert.alert(
@@ -88,24 +92,24 @@ export default function CadastroLivro() {
           errorMessages.join('\n\n')
         );
       }
-      // Tratamento para categoria não encontrada
+      //tratamento para categoria não encontrada
       else if (error.response?.status === 400 && error.response?.data?.categorias_disponiveis) {
         Alert.alert(
           'Categoria não encontrada',
           `${error.response.data.message}\n\nCategorias disponíveis:\n${error.response.data.categorias_disponiveis.join('\n')}`
         );
       }
-      // Tratamento para erros de autenticação (401)
+      //tratamento para erros de autenticação (401)
       else if (error.response?.status === 401) {
         Alert.alert('Erro de autenticação', 'Sessão expirada. Faça login novamente.');
         await AsyncStorage.removeItem('@auth_token');
         router.push('/login');
       }
-      // Outros erros do servidor
+      // outros erros do servidor
       else if (error.response?.data?.message) {
         Alert.alert('Erro', error.response.data.message);
       }
-      // Erros de conexão
+      // erros de conexão
       else {
         Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
       }
@@ -159,27 +163,43 @@ export default function CadastroLivro() {
             placeholderTextColor="#999"
           />
 
-          <ModalDropdown
-            options={estadosLivro}
-            defaultValue="Selecione o estado do livro"
+          <DropDownPicker
+            open={openEstado}
+            value={estado}
+            items={estadosLivro.map(estado => ({label: estado, value: estado}))}
+            setOpen={setOpenEstado}
+            setValue={setEstado}
+            placeholder="Selecione o estado do livro"
             style={styles.dropdown}
+            dropDownContainerStyle={[styles.dropdownList, {
+              position: 'relative',
+              maxHeight: 200,
+              zIndex: openEstado ? 1000 : 1,
+            }]}
             textStyle={styles.dropdownText}
-            dropdownStyle={styles.dropdownList}
-            onSelect={(index, value) => setEstado(value)}
+            listMode="SCROLLVIEW"
+            scrollViewProps={{
+              nestedScrollEnabled: true
+            }}
           />
 
-          <ModalDropdown
-            options={
-              categorias.length > 0
-                ? categorias.map(cat => cat.nome)
-                : ['Carregando categorias...']
-            }
-            defaultValue="Selecione a categoria"
+          <DropDownPicker
+            open={openCategoria}
+            value={selectedCategoryName}
+            items={categorias.map(cat => ({label: cat.nome, value: cat.nome}))}
+            setOpen={setOpenCategoria}
+            setValue={setSelectedCategoryName}
+            placeholder="Selecione a categoria"
             style={styles.dropdown}
+            dropDownContainerStyle={[styles.dropdownList, {
+              position: 'relative',
+              maxHeight: 200,
+              zIndex: openCategoria ? 1000 : 1,
+            }]}
             textStyle={styles.dropdownText}
-            dropdownStyle={styles.dropdownList}
-            onSelect={(index, value) => {
-              setSelectedCategoryName(value); // Armazena apenas o nome da categoria
+            listMode="SCROLLVIEW"
+            scrollViewProps={{
+              nestedScrollEnabled: true
             }}
             disabled={loading}
           />
@@ -298,5 +318,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginTop: 2,
+  },
+  dropdown: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    zIndex: 1, 
+  },
+  dropdownList: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginTop: 5,
+    zIndex: 10, 
   },
 });

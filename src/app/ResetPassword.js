@@ -13,12 +13,12 @@ export default function RedefinirSenha() {
 
   const handleRedefinirSenha = async () => {
     try {
-      let response = await api.post('/redefinir-senha', {
+      const response = await api.post('/redefinir-senha', {
         token, 
         novaSenha, 
         email
       });
-
+  
       if (response.data?.success) {
         Alert.alert('Sucesso', 'Senha redefinida com sucesso!', [
           {
@@ -28,55 +28,64 @@ export default function RedefinirSenha() {
         ]);
         return;
       }
-
+  
       // Tratamento de erros de validação (400)
       if (response.status === 400 && response.data?.errors) {
-        const firstError = response.data.errors[0];
+        const errorMessages = response.data.errors.map(err => 
+          `• ${err.message}`
+        ).join('\n');
+        
         Alert.alert(
-          `Erro no ${firstError.field === 'novaSenha' ? 'senha' : firstError.field}`,
-          firstError.message
+          'Erro no formulário', 
+          errorMessages
         );
         return;
       }
-
-      // Tratamento de outros erros (404, 500, etc.)
+  
       throw new Error(response.data?.error || 'Falha ao alterar senha');
-
-
+  
     } catch (error) {
-      
-      console.error('Erro na redefinição:', error);
-
+      // Suprime logs de erros 400 tratados
+      if (!(error.response?.status === 400)) {
+        console.error('Erro na redefinição:', error);
+      }
+  
       if (error.response) {
-        // Erro com resposta do servidor (4xx, 5xx)
         const errorData = error.response.data || {};
         
+        // Tratamento especial para erros de validação
         if (error.response.status === 400 && errorData.errors) {
-          // Erros de validação (array de erros)
-          const errorMessages = errorData.errors.map(err => `• ${err.message}`).join('\n');
-          Alert.alert('Erro no formulário', errorMessages);
-    
-      // Tratamento especial para erros de rede/axios
-      if (error.response?.data?.errors) {
-        const firstError = error.response.data.errors[0];
-        Alert.alert(
-          `Erro no ${firstError.field === 'novaSenha' ? 'senha' : firstError.field}`,
-          firstError.message
-        );
-
+          const errorMessages = errorData.errors.map(err => 
+            ` ${err.message}`
+          ).join('\n');
+          
+          Alert.alert(
+            'Erro no formulário', 
+            errorMessages
+          );
+        
+        // Tratamento para usuário não encontrado (404)
+        } else if (error.response.status === 404) {
+          Alert.alert(
+            'Erro', 
+            'Email não cadastrado no sistema'
+          );
+        
+        // Outros erros
+        } else {
+          Alert.alert(
+            'Erro', 
+            errorData.error || 'Erro ao processar sua solicitação'
+          );
+        }
       } else {
         Alert.alert(
-          'Erro', 
-          error.message === 'Usuário não encontrado' 
-            ? 'Email não cadastrado no sistema'
-            : error.message || 'Erro ao processar sua solicitação'
+          'Erro de conexão', 
+          'Não foi possível conectar ao servidor. Verifique sua internet.'
         );
       }
-    };
-  }
-} 
-}
-
+    }
+  };
   
   return (
     <View style={{ padding: 20 }}>

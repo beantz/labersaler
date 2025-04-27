@@ -47,12 +47,14 @@ export default function VerificationScreen({ route }) {
         return;
       }
   
-      // Tratamento de erros específicos
       const errorData = response.data || {};
       Alert.alert('Erro', errorData.error || 'Erro ao validar código');
   
     } catch (error) {
-      console.error('Erro na verificação:', error);
+      // Não fazemos console.log para erros silenciosos
+      if (!error.silent) {
+        console.error('Erro crítico na verificação:', error);
+      }
       
       if (error.response) {
         const errorData = error.response.data || {};

@@ -9,6 +9,7 @@ export default function HomePage() {
   const router = useRouter();
   const [busca, setBusca] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
+  //categorias sendo recebida aqui
   const [categorias, setCategorias] = useState([]);
   const [livros, setLivros] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');

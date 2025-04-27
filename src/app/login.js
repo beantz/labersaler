@@ -13,49 +13,114 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // const handleLogin = async () => {
+  //   setIsLoading(true);
+  
+  //   try {
+  //     const response = await api.post('/login', { 
+  //       email, 
+  //       password 
+  //     }, {
+  //       timeout: 10000 // 10 segundos de timeout
+  //     });
+  
+  //     // Verificação mais segura
+  //     if (response.data?.token) {
+
+  //       await AsyncStorage.setItem('@auth_token', response.data.token);
+  //       router.push('/home');
+
+  //     } else {
+  //       throw new Error('Resposta inesperada do servidor');
+  //     }
+  
+  //   } catch (error) {
+  //     setIsLoading(false);
+    
+  //     let errorMessage = 'Erro desconhecido';
+  
+  //     // Erros de rede/timeout
+  //     if (error.code === 'ECONNABORTED' || !error.response) {
+  //       errorMessage = 'Servidor não respondeu. Verifique sua conexão.';
+  //     }
+  //     // Erros de validação (400)
+  //     else if (error.response?.status === 400) {
+  //       if (error.response.data?.errors) {
+  //         errorMessage = error.response.data.errors
+  //           .map(err => `${err.msg || err.message}`)
+  //           .join('\n');
+  //       } else {
+  //         errorMessage = error.response.data?.message || 'Dados inválidos';
+  //       }
+  //     }
+  //     // Outros erros HTTP
+  //     else if (error.response?.status) {
+  //       errorMessage = error.response.data?.message || `Erro ${error.response.status}`;
+  //     }
+  
+  //     Alert.alert('Erro', errorMessage);
+  //   }
+  // };
+
   const handleLogin = async () => {
+    // Validação inicial dos campos
+    if (!email || !email.trim()) {
+      Alert.alert('Erro', 'Por favor, informe seu e-mail');
+      return;
+    }
+  
+    if (!password) {
+      Alert.alert('Erro', 'Por favor, informe sua senha');
+      return;
+    }
+  
     setIsLoading(true);
   
     try {
       const response = await api.post('/login', { 
-        email, 
+        email: email.trim(), 
         password 
       }, {
-        timeout: 10000 // 10 segundos de timeout
+        timeout: 10000
       });
   
-      // Verificação mais segura
       if (response.data?.token) {
-
         await AsyncStorage.setItem('@auth_token', response.data.token);
         router.push('/home');
-
       } else {
         throw new Error('Resposta inesperada do servidor');
       }
   
     } catch (error) {
       setIsLoading(false);
-    
-      let errorMessage = 'Erro desconhecido';
-  
-      // Erros de rede/timeout
-      if (error.code === 'ECONNABORTED' || !error.response) {
-        errorMessage = 'Servidor não respondeu. Verifique sua conexão.';
+      
+      if (!error.silent) {
+        console.error('Login Error:', error);
       }
-      // Erros de validação (400)
-      else if (error.response?.status === 400) {
-        if (error.response.data?.errors) {
-          errorMessage = error.response.data.errors
-            .map(err => `${err.msg || err.message}`)
-            .join('\n');
-        } else {
-          errorMessage = error.response.data?.message || 'Dados inválidos';
+  
+      let errorMessage = 'Erro ao realizar login';
+  
+      // Tratamento específico para erros de validação do backend
+      if (error.response?.status === 400) {
+        const firstError = error.response.data?.errors?.[0];
+        errorMessage = firstError?.msg || 'Dados inválidos';
+        
+        // Tratamento especial para campo de senha vazio (se retornado pelo backend)
+        if (firstError?.field === 'password') {
+          errorMessage = 'A senha é obrigatória';
         }
       }
-      // Outros erros HTTP
-      else if (error.response?.status) {
-        errorMessage = error.response.data?.message || `Erro ${error.response.status}`;
+      else if (error.response?.status === 404) {
+        errorMessage = 'E-mail não encontrado';
+      }
+      else if (error.response?.status === 401) {
+        errorMessage = 'Senha incorreta';
+      }
+      else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Tempo de conexão esgotado. Tente novamente.';
+      }
+      else if (!error.response) {
+        errorMessage = 'Sem conexão com o servidor';
       }
   
       Alert.alert('Erro', errorMessage);

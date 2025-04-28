@@ -1,6 +1,7 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Configuração base da API
 const api = axios.create({
@@ -42,6 +43,21 @@ const setupRequestInterceptors = () => {
     }
   });
 };
+
+api.interceptors.request.use(async (config) => {
+  if (config.data instanceof FormData) {
+    config.headers['Content-Type'] = 'multipart/form-data';
+    
+    // Adiciona cabeçalho adicional para Android
+    if (Platform.OS === 'android') {
+      config.headers['Accept'] = 'application/json';
+      config.headers['Content-Type'] = 'multipart/form-data; boundary=someArbitraryBoundary';
+    }
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
 
 /**
  * Interceptor para tratamento de respostas

@@ -9,6 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "infoPlist": {
+      "NSPhotoLibraryUsageDescription": "Precisamos acessar sua galeria para selecionar imagens"
+      },
       "supportsTablet": true,
       "bundleIdentifier": "com.beatriz.libersale"
     },

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 // import ModalDropdown from 'react-native-modal-dropdown';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import api from '../services/api.js';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function CadastroLivro() {
   const [titulo, setTitulo] = useState('');
@@ -16,10 +17,32 @@ export default function CadastroLivro() {
   const [loading, setLoading] = useState(false);
   const [openEstado, setOpenEstado] = useState(false);
   const [openCategoria, setOpenCategoria] = useState(false);
+  const [imagem, setImagem] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const router = useRouter();
 
   const estadosLivro = ['Novo', 'Usado - Bom', 'Usado - Regular', 'Usado - Ruim'];
+
+  const selecionarImagem = async () => {
+    // Solicita permissões
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão necessária', 'Precisamos acessar sua galeria para selecionar imagens');
+      return;
+    }
+  
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+  
+    if (!resultado.canceled && resultado.assets) {
+      setImagem(resultado.assets[0]);
+    }
+  };
 
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -52,13 +75,39 @@ export default function CadastroLivro() {
 
   const handleCadastrarLivro = async () => {
     try {
-      const response = await api.post('/livros/cadastrar', {
-        titulo,
-        autor,
-        preco,
-        estado,
-        descricao,
-        categoria_id: selectedCategoryName
+      if (!imagem) {
+        Alert.alert('Atenção', 'Selecione uma imagem para o livro');
+        return;
+      }
+  
+      const formData = new FormData();
+      formData.append('titulo', titulo);
+      formData.append('autor', autor);
+      formData.append('preco', preco);
+      formData.append('estado', estado);
+      formData.append('descricao', descricao);
+      formData.append('categoria_id', selectedCategoryName);
+  
+      // Prepara o arquivo para upload
+      const fileExtension = imagem.uri.split('.').pop();
+      const fileName = `livro_${Date.now()}.${fileExtension}`;
+  
+      formData.append('imagem', {
+        uri: imagem.uri,
+        name: fileName,
+        type: `image/${fileExtension}`,
+      });
+  
+      const response = await api.post('/livros/cadastrar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round(
+            (progressEvent.loaded / progressEvent.total) * 100
+          );
+          setUploadProgress(progress);
+        },
       });
   
       if (response.data && response.data.message) {
@@ -131,6 +180,39 @@ export default function CadastroLivro() {
 
         <View style={styles.innerContainer}>
           <Text style={styles.header}>Cadastro de Livro</Text>
+
+          {/* Campo para upload de imagem */}
+          <TouchableOpacity 
+            style={styles.imageButton}
+            onPress={selecionarImagem}
+          >
+            <Text style={styles.buttonText}>
+              {imagem ? 'Imagem Selecionada' : 'Selecionar Imagem'}
+            </Text>
+          </TouchableOpacity>
+
+          {imagem && (
+            <Image 
+              source={{ uri: imagem.uri }} 
+              style={styles.imagePreview}
+            />
+          )}
+
+          {uploadProgress > 0 && uploadProgress < 100 && (
+            <View style={styles.progressContainer}>
+              <Text style={styles.progressText}>
+                Enviando: {uploadProgress}%
+              </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${uploadProgress}%` }
+                  ]} 
+                />
+              </View>
+            </View>
+          )}
 
           <TextInput
             placeholder="Título do Livro"
@@ -337,5 +419,38 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 5,
     zIndex: 10, 
+  },
+  imageButton: {
+    backgroundColor: '#4CAF50',
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 16,
+    width: '100%',
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  progressContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  progressText: {
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 10,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
   },
 });

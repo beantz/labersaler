@@ -25,6 +25,7 @@ export default function HomePage() {
         const [categoriasResponse, livrosResponse] = await Promise.all([
           api.get('/categorias'),
           api.get('/livros')
+          
         ]);
         
         setCategorias(categoriasResponse.data.data);
@@ -60,15 +61,25 @@ export default function HomePage() {
   });
   
   const renderLivro = ({ item }) => (
+  
     <TouchableOpacity 
       style={styles.livroItem}
       onPress={() => router.push(`/livro/${item.id}`)}
     >
-      {/* Substitui a imagem por um ícone padrão */}
-      <View style={styles.livroIconContainer}>
-        <FontAwesome name="book" size={40} color="#6A006A" />
-      </View>
-      
+
+      {item.imagem?.url ? (
+        <Image 
+          source={{ uri: item.imagem.url }} 
+          style={styles.livroImagem}
+          onError={(e) => console.log('Erro ao carregar:', e.nativeEvent.error)}
+          resizeMode="contain" // Altere para "contain" ou "cover" conforme necessário
+        />
+      ) : (
+        <View style={styles.livroIconContainer}>
+          <FontAwesome name="book" size={40} color="#6A006A" />
+        </View>
+      )}
+
       <View style={styles.livroInfo}>
         <Text style={styles.livroNome}>{item.titulo}</Text>
         <Text style={styles.livroAutor}>{item.autor}</Text>
@@ -250,6 +261,8 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 6,
     marginRight: 12,
+    resizeMode: 'cover',
+    backgroundColor: '#F0E6FF'
   },
   livroNome: {
     fontSize: 16,

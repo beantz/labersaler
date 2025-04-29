@@ -1,9 +1,10 @@
 // app/forgotPassword.js
 import React from 'react';
-import { View, Text, StyleSheet, TextInput, Button, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Button, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import api from '../services/api.js';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState('');
@@ -60,9 +61,18 @@ const ForgotPasswordScreen = () => {
 
   return (
     <View style={styles.container}>
+      <MaterialCommunityIcons
+        name="book-open-variant"
+        size={60}
+        color="#FFF"
+        style={styles.icon}
+      />
       <Text style={styles.title}>Esqueceu a Senha</Text>
+
+      <View style={styles.inputWrapper}>
+      <MaterialCommunityIcons name="email-outline" size={24} color="#666" style={styles.inputIcon} />
       <TextInput
-        style={styles.input}
+        style={styles.inputWithIcon}
         placeholder="Digite seu email"
         placeholderTextColor="#666"
         value={email}
@@ -70,7 +80,12 @@ const ForgotPasswordScreen = () => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      <Button title="Recuperar Senha" onPress={handleResetPassword} />
+      {/* <Button title="Recuperar Senha" onPress={handleResetPassword} /> */}
+    </View>
+
+    <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
+        <Text style={styles.buttonText}>Recuperar Senha</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -79,19 +94,62 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
+    backgroundColor: '#8B008B',
+  },
+  icon: {
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
     marginBottom: 24,
     textAlign: 'center',
+    color: '#fff',
   },
   input: {
     height: 40,
+    width: '100%',
     borderColor: 'gray',
     borderWidth: 1,
     marginBottom: 12,
     paddingHorizontal: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  button: {
+    width: '100%',
+    backgroundColor: '#007BFF',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    height: 40,
+    width: '100%',
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  inputWithIcon: {
+    flex: 1,
+    color: '#000',
+    fontSize: 16,
   },
 });
 

@@ -13,55 +13,6 @@ const LoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // const handleLogin = async () => {
-  //   setIsLoading(true);
-  
-  //   try {
-  //     const response = await api.post('/login', { 
-  //       email, 
-  //       password 
-  //     }, {
-  //       timeout: 10000 // 10 segundos de timeout
-  //     });
-  
-  //     // Verificação mais segura
-  //     if (response.data?.token) {
-
-  //       await AsyncStorage.setItem('@auth_token', response.data.token);
-  //       router.push('/home');
-
-  //     } else {
-  //       throw new Error('Resposta inesperada do servidor');
-  //     }
-  
-  //   } catch (error) {
-  //     setIsLoading(false);
-    
-  //     let errorMessage = 'Erro desconhecido';
-  
-  //     // Erros de rede/timeout
-  //     if (error.code === 'ECONNABORTED' || !error.response) {
-  //       errorMessage = 'Servidor não respondeu. Verifique sua conexão.';
-  //     }
-  //     // Erros de validação (400)
-  //     else if (error.response?.status === 400) {
-  //       if (error.response.data?.errors) {
-  //         errorMessage = error.response.data.errors
-  //           .map(err => `${err.msg || err.message}`)
-  //           .join('\n');
-  //       } else {
-  //         errorMessage = error.response.data?.message || 'Dados inválidos';
-  //       }
-  //     }
-  //     // Outros erros HTTP
-  //     else if (error.response?.status) {
-  //       errorMessage = error.response.data?.message || `Erro ${error.response.status}`;
-  //     }
-  
-  //     Alert.alert('Erro', errorMessage);
-  //   }
-  // };
-
   const handleLogin = async () => {
     // Validação inicial dos campos
     if (!email || !email.trim()) {
@@ -151,8 +102,10 @@ const LoginScreen = () => {
           <Text style={styles.title}>Laber-Sale</Text>
           <Text style={styles.title}>Realize seu Login</Text>
           
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="email-outline" size={24} color="#666" style={styles.inputIcon} />
           <TextInput
-            style={styles.input}
+            style={styles.inputWithIcon}
             placeholder="Email"
             placeholderTextColor="#666"
             value={email}
@@ -160,14 +113,19 @@ const LoginScreen = () => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
+          </View>
+
+        <View style={styles.inputWrapper}>
+          <MaterialCommunityIcons name="lock-outline" size={24} color="#666" style={styles.inputIcon} />
           <TextInput
-            style={styles.input}
+            style={styles.inputWithIcon}
             placeholder="Senha"
             placeholderTextColor="#666"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
+        </View>
           
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Entrar</Text>
@@ -245,6 +203,26 @@ const styles = StyleSheet.create({
     color: '#f5f5f5',
     marginTop: 12,
     textAlign: 'center',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    height: 50,
+    width: '100%',
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  inputWithIcon: {
+    flex: 1,
+    color: '#000',
+    fontSize: 16,
   },
 });
 

@@ -1,17 +1,21 @@
-FROM reactnativecommunity/react-native:latest
+FROM node:18-alpine 
 WORKDIR /app
 
-# Instalação global do Expo CLI
-RUN npm install -g expo-cli
+#copia arquivos necessários para instalação
+COPY package*.json ./
+
+#instala dependências
+RUN npm install --frozen-lockfile
+
+#copia restante do projeto
+COPY . .
 
 # Configurações para hot-reload
 ENV EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
 ENV REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
 
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-
+#expoe portas
 EXPOSE 19000 19001 19002
-CMD ["expo", "start"]
+
+#inicia expo
+CMD ["npx", "expo", "start"]

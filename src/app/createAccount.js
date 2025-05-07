@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
+  KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api.js';
@@ -49,13 +50,22 @@ const CadastroScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+    style={styles.container}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  >
+    {/* Barra Superior */}
+    <View style={styles.topBar}>
+      <Text style={styles.header}>LiberSale</Text>
+    </View>
+
+    <View style={styles.innerContainer}>
       <Text style={styles.title}>Cadastro</Text>
 
       <TextInput
         style={styles.input}
         placeholder="Nome"
-        placeholderTextColor="#666"
+        placeholderTextColor="#888"
         value={nome}
         onChangeText={setName}
       />
@@ -63,7 +73,7 @@ const CadastroScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="E-mail"
-        placeholderTextColor="#666"
+        placeholderTextColor="#888"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
@@ -72,7 +82,7 @@ const CadastroScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="Número de Contato"
-        placeholderTextColor="#666"
+        placeholderTextColor="#888"
         keyboardType="phone-pad"  // Teclado numérico para telefones
         value={contato}
         onChangeText={setContato}
@@ -83,7 +93,7 @@ const CadastroScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="Senha"
-        placeholderTextColor="#666"
+        placeholderTextColor="#888"
         secureTextEntry
         value={senha}
         onChangeText={setPassword}
@@ -92,7 +102,7 @@ const CadastroScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="Confirmar Senha"
-        placeholderTextColor="#666"
+        placeholderTextColor="#888"
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
@@ -102,33 +112,61 @@ const CadastroScreen = () => {
         <Text style={styles.buttonText}>Cadastrar</Text>
       </TouchableOpacity>
     </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1,
+  container: {
+    flex: 1,
+    backgroundColor: '#8B008B',
+  },
+  topBar: {
+    height: 60,
+    backgroundColor: '#6A006A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  header: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  innerContainer: {
+    flex: 1,
     padding: 20,
-    justifyContent: 'center',},
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
+    paddingTop: 30,
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   input: {
-    height: 40,
+    height: 50,
     borderWidth: 1,
     borderColor: '#ccc',
-    marginBottom: 5,
-    padding: 10,
-    borderRadius: 5
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFF',
+    color: '#000',
   },
   button: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#0000CD',
     padding: 15,
-    borderRadius: 5,
-    marginTop: 10
+    borderRadius: 8,
+    marginTop: 10,
   },
   buttonText: {
-    color: 'white',
+    color: '#FFF',
     textAlign: 'center',
-    fontWeight: 'bold'
-  }
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
 
 export default CadastroScreen;

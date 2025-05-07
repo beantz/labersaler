@@ -1,7 +1,6 @@
-
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 
 // Configuração base da API
 const api = axios.create({
@@ -12,6 +11,32 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+// Objeto para controle de erros exibidos
+const errorDisplay = {
+  lastShown: null,
+  cooldown: 5000 // 5 segundos entre erros iguais
+};
+
+/**
+ * Mostra alerta de erro formatado
+ */
+const showErrorAlert = (message) => {
+  const now = Date.now();
+  if (errorDisplay.lastShown !== message || 
+      (now - errorDisplay.lastShown?.timestamp > errorDisplay.cooldown)) {
+    Alert.alert(
+      'Erro',
+      message,
+      [{ text: 'OK' }],
+      { cancelable: false }
+    );
+    errorDisplay.lastShown = {
+      message,
+      timestamp: now
+    };
+  }
+};
 
 /**
  * Interceptor para logging de requisições
@@ -44,11 +69,11 @@ const setupRequestInterceptors = () => {
   });
 };
 
+// Interceptor para FormData
 api.interceptors.request.use(async (config) => {
   if (config.data instanceof FormData) {
     config.headers['Content-Type'] = 'multipart/form-data';
     
-    // Adiciona cabeçalho adicional para Android
     if (Platform.OS === 'android') {
       config.headers['Accept'] = 'application/json';
       config.headers['Content-Type'] = 'multipart/form-data; boundary=someArbitraryBoundary';
@@ -78,17 +103,42 @@ const setupResponseInterceptors = () => {
       const data = response?.data;
       const url = config?.url;
 
-      // Tratamento específico para token expirado/inválido (401)
-      if (status === 401 && !data?.message?.includes('logout realizado')) {
-        try {
-          await AsyncStorage.removeItem('@auth_token');
-          delete api.defaults.headers.common['Authorization'];
-        } catch (storageError) {
-          console.error('[Token Removal Error]', storageError);
+      // Tratamento específico para erros de autenticação
+      if (status === 401) {
+        const isLoginRoute = url?.includes('/login');
+        const isWrongPassword = data?.message?.includes('Senha incorreta');
+        
+        if (isLoginRoute && isWrongPassword) {
+          // Não remove token pois é tentativa de login
+          return Promise.reject({
+            ...error,
+            isAuthError: true,
+            userMessage: 'E-mail ou senha incorretos'
+          });
+        } else {
+          // Token inválido/expirado - faz logout
+          try {
+            await AsyncStorage.removeItem('@auth_token');
+            delete api.defaults.headers.common['Authorization'];
+          } catch (storageError) {
+            console.error('[Token Removal Error]', storageError);
+          }
+          return Promise.reject({
+            ...error,
+            isAuthError: true,
+            userMessage: 'Sessão expirada. Faça login novamente.'
+          });
         }
       }
 
-      // Log de erros não silenciosos (todos exceto 400 e 404)
+      // Tratamento de outros erros
+      const errorToReject = {
+        ...error,
+        isAuthError: false,
+        userMessage: 'Ocorreu um erro. Tente novamente.'
+      };
+
+      // Log de erros não silenciosos
       if (![400, 404].includes(status)) {
         console.error('[API Error]', {
           message: error.message,
@@ -99,10 +149,7 @@ const setupResponseInterceptors = () => {
         });
       }
 
-      return Promise.reject({
-        ...error,
-        silent: [400, 404].includes(status) // Marca erros que não devem ser logados
-      });
+      return Promise.reject(errorToReject);
     }
   );
 };
@@ -110,5 +157,16 @@ const setupResponseInterceptors = () => {
 // Configura os interceptors
 setupRequestInterceptors();
 setupResponseInterceptors();
+
+// Função auxiliar para tratamento de erros nos componentes
+export const handleApiError = (error, customHandler) => {
+  if (error.isAuthError && error.userMessage) {
+    showErrorAlert(error.userMessage);
+  } else if (customHandler) {
+    customHandler(error);
+  } else {
+    showErrorAlert(error.userMessage || 'Erro desconhecido');
+  }
+};
 
 export default api;

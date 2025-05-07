@@ -1,11 +1,13 @@
 // screens/RedefinirSenha.js
 import React, { useState } from 'react';
-import { View, TextInput, Button, Alert } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import api from '../services/api.js';
 
 export default function RedefinirSenha() {
   const [novaSenha, setNovaSenha] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { token } = useLocalSearchParams();
   const { email } = useLocalSearchParams();
 
@@ -88,14 +90,88 @@ export default function RedefinirSenha() {
   };
   
   return (
-    <View style={{ padding: 20 }}>
+    <View style={styles.container}>
+      {/* Ícone de cadeado */}
+      <FontAwesome name="lock" size={50} color="white" style={styles.lockIcon} />
+
       <TextInput
+        style={styles.input}
         placeholder="Nova senha"
+        placeholderTextColor="#666"
         value={novaSenha}
         onChangeText={setNovaSenha}
-        secureTextEntry
+        secureTextEntry={!isPasswordVisible}
       />
-      <Button title="Redefinir Senha" onPress={handleRedefinirSenha} />
+
+      {/* Mostrar/ocultar senha alinhado à direita */}
+      <TouchableOpacity
+        style={styles.togglePassword}
+        onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+      >
+        <Feather
+          name={isPasswordVisible ? 'eye-off' : 'eye'}
+          size={18}
+          color="#fff"
+          style={{ marginRight: 5 }}
+        />
+        <Text style={styles.togglePasswordText}>
+          {isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Botão azul */}
+      <TouchableOpacity style={styles.button} onPress={handleRedefinirSenha}>
+        <Text style={styles.buttonText}>Redefinir Senha</Text>
+      </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#8B008B',
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockIcon: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+  },
+  input: {
+    height: 45,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 5,
+    color: '#000',
+  },
+  togglePassword: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginBottom: 25,
+    marginTop: 5,
+  },
+  togglePasswordText: {
+    color: '#fff',
+    textDecorationLine: 'underline',
+  },
+  button: {
+    backgroundColor: 'blue',
+    padding: 15,
+    borderRadius: 5,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});

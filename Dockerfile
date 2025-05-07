@@ -6,6 +6,7 @@ COPY package*.json ./
 
 #instala dependências
 RUN npm install --frozen-lockfile
+RUN npm install -g expo-cli@latest
 
 #copia restante do projeto
 COPY . .

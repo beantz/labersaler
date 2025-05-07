@@ -3,130 +3,118 @@ import {
   Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, View, ActivityIndicator, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api.js';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
-    // Validação inicial dos campos
     if (!email || !email.trim()) {
       Alert.alert('Erro', 'Por favor, informe seu e-mail');
       return;
     }
-  
+
     if (!password) {
       Alert.alert('Erro', 'Por favor, informe sua senha');
       return;
     }
-  
+
     setIsLoading(true);
-  
+
     try {
       const response = await api.post('/login', { 
         email: email.trim(), 
         password 
-      }, {
-        timeout: 10000
-      });
-  
+      }, { timeout: 10000 });
+
       if (response.data?.token) {
         await AsyncStorage.setItem('@auth_token', response.data.token);
         router.push('/home');
       } else {
         throw new Error('Resposta inesperada do servidor');
       }
-  
+
     } catch (error) {
       setIsLoading(false);
-      
-      if (!error.silent) {
-        console.error('Login Error:', error);
-      }
-  
+      console.error('Login Error:', error);
+
       let errorMessage = 'Erro ao realizar login';
-  
-      // Tratamento específico para erros de validação do backend
+
       if (error.response?.status === 400) {
         const firstError = error.response.data?.errors?.[0];
         errorMessage = firstError?.msg || 'Dados inválidos';
-        
-        // Tratamento especial para campo de senha vazio (se retornado pelo backend)
         if (firstError?.field === 'password') {
           errorMessage = 'A senha é obrigatória';
         }
-      }
-      else if (error.response?.status === 404) {
+      } else if (error.response?.status === 404) {
         errorMessage = 'E-mail não encontrado';
-      }
-      else if (error.response?.status === 401) {
+      } else if (error.response?.status === 401) {
         errorMessage = 'Senha incorreta';
-      }
-      else if (error.code === 'ECONNABORTED') {
+      } else if (error.code === 'ECONNABORTED') {
         errorMessage = 'Tempo de conexão esgotado. Tente novamente.';
-      }
-      else if (!error.response) {
+      } else if (!error.response) {
         errorMessage = 'Sem conexão com o servidor';
       }
-  
+
       Alert.alert('Erro', errorMessage);
     }
   };
 
-  const handleCreateAccount = () => {
-    router.push('/createAccount');
-  };
-
-  const handleForgotPassword = () => {
-    router.push('/forgotPassword');
-  };
+  const handleCreateAccount = () => router.push('/createAccount');
+  const handleForgotPassword = () => router.push('/forgotPassword');
 
   return (
     <SafeAreaView style={styles.container}>
       {isLoading ? (
-        // Tela de processamento
         <View style={styles.loadingContainer}>
-          <MaterialCommunityIcons name="book-open-variant" size={60} color='#007BFF' />
+          <MaterialCommunityIcons name="book-open-variant" size={60} color="blue" />
           <Text style={styles.loadingText}>Estamos processando suas informações...</Text>
           <ActivityIndicator size="large" color="#007BFF" />
         </View>
       ) : (
-        // Tela de login
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.innerContainer}>
           <MaterialCommunityIcons name="book-open-variant" size={60} color='#007BFF' />
           <Text style={styles.title}>Laber-Sale</Text>
           <Text style={styles.title}>Realize seu Login</Text>
-          
+
           <View style={styles.inputWrapper}>
             <MaterialCommunityIcons name="email-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.inputWithIcon}
-            placeholder="Email"
-            placeholderTextColor="#666"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <TextInput
+              style={styles.inputWithIcon}
+              placeholder="Email"
+              placeholderTextColor="#666"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
           </View>
 
-        <View style={styles.inputWrapper}>
-          <MaterialCommunityIcons name="lock-outline" size={24} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.inputWithIcon}
-            placeholder="Senha"
-            placeholderTextColor="#666"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
-          
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="lock-outline" size={24} color="#666" style={styles.inputIcon} />
+            <TextInput
+              style={styles.inputWithIcon}
+              placeholder="Senha"
+              placeholderTextColor="#666"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!isPasswordVisible}
+            />
+            <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+              <Feather
+                name={isPasswordVisible ? 'eye-off' : 'eye'}
+                size={22}
+                color="#666"
+              />
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Entrar</Text>
           </TouchableOpacity>
@@ -175,35 +163,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#f5f5f5',
   },
-  input: {
-    width: '100%',
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    backgroundColor: '#FFF',
-    color: '#000',
-  },
-  button: {
-    width: '100%',
-    backgroundColor: '#007BFF',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  link: {
-    color: '#f5f5f5',
-    marginTop: 12,
-    textAlign: 'center',
-  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,6 +182,24 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#000',
     fontSize: 16,
+  },
+  button: {
+    width: '100%',
+    backgroundColor: 'blue',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  link: {
+    color: '#f5f5f5',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });
 

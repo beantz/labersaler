@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Image, Modal, KeyboardAvoidingView, Platform} from 'react-native';
+import { View, Text, Alert, TextInput, TouchableOpacity, FlatList, StyleSheet, Image, Modal, KeyboardAvoidingView, Platform} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import api from '../services/api.js';
@@ -9,6 +9,7 @@ export default function HomePage() {
   const router = useRouter();
   const [busca, setBusca] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [loading, setLoading] = useState(false)
   //categorias sendo recebida aqui
   const [categorias, setCategorias] = useState([]);
   const [livros, setLivros] = useState([]);

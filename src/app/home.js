@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, TextInput, TouchableOpacity, FlatList, StyleSheet, Image, Modal, KeyboardAvoidingView, Platform} from 'react-native';
+import {
+  View, Text, Alert, TextInput, TouchableOpacity, FlatList,
+  StyleSheet, Image, Modal, KeyboardAvoidingView, Platform
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api.js';
-import { FontAwesome } from '@expo/vector-icons';
 
 export default function HomePage() {
   const router = useRouter();
   const [busca, setBusca] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [loading, setLoading] = useState(false)
-  //categorias sendo recebida aqui
+  const [loading, setLoading] = useState(false);
   const [categorias, setCategorias] = useState([]);
   const [livros, setLivros] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
@@ -19,16 +20,14 @@ export default function HomePage() {
   const handlePerfil = () => router.push('/perfil');
   const handleHome = () => router.push('/home');
 
-  //método adaptado para buscar categorias e livros juntos
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [categoriasResponse, livrosResponse] = await Promise.all([
           api.get('/categorias'),
           api.get('/livros')
-          
         ]);
-        
         setCategorias(categoriasResponse.data.data);
         setLivros(livrosResponse.data.books);
       } catch (error) {
@@ -55,25 +54,32 @@ export default function HomePage() {
       livro.autor.toLowerCase().includes(buscaLower);
 
     const correspondeCategoria =
-      categoriaSelecionada === '' || 
-      (livro.categorias && livro.categorias.some(cat => cat.nome === categoriaSelecionada));
+      categoriaSelecionada === '' ||
+      (livro.categorias &&
+        livro.categorias.some(cat => cat.nome === categoriaSelecionada));
 
     return correspondeBusca && correspondeCategoria;
   });
-  
-  const renderLivro = ({ item }) => (
-  
-    <TouchableOpacity 
-      style={styles.livroItem}
-      onPress={() => router.push(`/livro/${item.id}`)}
-    >
 
+  const renderLivro = ({ item }) => (
+    <TouchableOpacity
+      style={styles.livroItem}
+      onPress={() =>
+        router.push({
+          pathname: '/Book',
+          params: {
+            livroId: item.id,
+            livroData: JSON.stringify(item),
+          },
+        })
+      }
+    >
       {item.imagem?.url ? (
-        <Image 
-          source={{ uri: item.imagem.url }} 
+        <Image
+          source={{ uri: item.imagem.url }}
           style={styles.livroImagem}
           onError={(e) => console.log('Erro ao carregar:', e.nativeEvent.error)}
-          resizeMode="contain" // Altere para "contain" ou "cover" conforme necessário
+          resizeMode="contain"
         />
       ) : (
         <View style={styles.livroIconContainer}>
@@ -137,6 +143,13 @@ export default function HomePage() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.livroList}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            !loading && (
+              <Text style={{ textAlign: 'center', color: '#fff', marginTop: 20 }}>
+                Nenhum livro encontrado.
+              </Text>
+            )
+          }
         />
       </View>
 
@@ -152,14 +165,24 @@ export default function HomePage() {
             <Text style={styles.modalTitle}>Selecione uma categoria</Text>
             {categorias.map((cat) => (
               <TouchableOpacity
-                key={cat}
+                key={cat.id}
                 onPress={() => {
-                  setCategoriaSelecionada(cat);
+                  setCategoriaSelecionada(cat.nome);
                   setMostrarModal(false);
                 }}
-                style={styles.modalItem}
+                style={[
+                  styles.modalItem,
+                  categoriaSelecionada === cat.nome && { backgroundColor: '#EEE' },
+                ]}
               >
-                <Text>{cat}</Text>
+                <Text
+                  style={{
+                    fontWeight: categoriaSelecionada === cat.nome ? 'bold' : 'normal',
+                    color: categoriaSelecionada === cat.nome ? '#6A006A' : '#000',
+                  }}
+                >
+                  {cat.nome}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -265,14 +288,39 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     backgroundColor: '#F0E6FF'
   },
+  livroIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: '#F0E6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  livroInfo: {
+    flex: 1,
+  },
   livroNome: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
-  livroPreco: {
+  livroAutor: {
     fontSize: 14,
     color: '#666',
+    marginTop: 4,
+  },
+  livroPreco: {
+    fontSize: 14,
+    color: '#6A006A',
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  livroCategoria: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,
@@ -312,40 +360,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     marginTop: 2,
-  },
-  livroIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 6,
-    marginRight: 12,
-    backgroundColor: '#F0E6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  livroInfo: {
-    flex: 1,
-  },
-  livroNome: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  livroAutor: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  livroPreco: {
-    fontSize: 14,
-    color: '#6A006A',
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  livroCategoria: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-    fontStyle: 'italic',
   },
 });

@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "infoPlist": {
-      "NSPhotoLibraryUsageDescription": "Precisamos acessar sua galeria para selecionar imagens"
+        "NSPhotoLibraryUsageDescription": "Precisamos acessar sua galeria para selecionar imagens"
       },
       "supportsTablet": true,
       "bundleIdentifier": "com.beatriz.libersale"
@@ -53,7 +53,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

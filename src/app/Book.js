@@ -1,70 +1,110 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ScrollView,
-  FlatList,
-  TextInput,
-  Linking,
-  Alert
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, FlatList,TextInput, Linking, Alert } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import api from '../services/api.js';
+import * as SecureStore from 'expo-secure-store';
 
-export default function LiberSale() {
+export default function Book() {
   const [comentario, setComentario] = useState('');
   const [comentarios, setComentarios] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const params = useLocalSearchParams();
+  const livro = JSON.parse(params.livroData);
+  const [nota, setNota] = useState(0);
 
-  const livro = {
-    titulo: "O Poder do Hábito",
-    autor: "Charles Duhigg",
-    preco: 39.90,
-    descricao: "O livro explora como os hábitos se formam e como podemos mudá-los para melhorar nossas vidas.",
-    imagem: { url: 'https://example.com/imagem-do-livro.jpg' },
-    vendedorTelefone: "+5591987654321"
-  };
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        
+        const response = await api.get(`/Review/${livro._id}`);
 
-  const avaliacoes = [
-    { id: 1, usuario: 'João', nota: 5, comentario: 'Ótimo livro, recomendo!' },
-    { id: 2, usuario: 'Maria', nota: 4, comentario: 'Muito bom, mas um pouco longo.' },
-    { id: 3, usuario: 'Carlos', nota: 5, comentario: 'Excelente, mudou minha visão sobre hábitos.' }
-  ];
+        console.log("Dados recebidos:", response.data); 
+        
+        const reviewsData = response.data.map(review => ({
+          _id: review._id,
+          comentario: review.comentario,
+          nota: review.nota,
+          usuario: review.usuario
+        }));
+        // const reviewsData = response.data.map(review => ({
+        //   _id: review._id || Math.random().toString(),
+        //   comentario: review.comentario || review.comentarios || "",
+        //   nota: review.nota || review.avaliacao || 0,
+        //   usuario: review.usuario || review.user_id?.nome || "Anônimo"
+        // }));
+        
+        setComentarios(reviewsData);
+        
+      } catch (err) {
+        console.error("Erro detalhado:", err);
+        setError(err.message || "Erro ao carregar avaliações");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    if (livro && livro._id) {
+      fetchReviews();
+    }
+  }, [livro?._id]);
 
   const renderAvaliacao = ({ item }) => (
     <View style={styles.avaliacaoContainer}>
-      <Text style={styles.avaliacaoNome}>{item.usuario}</Text>
-      <Text style={styles.avaliacaoNota}>Nota: {item.nota}</Text>
+      <Text style={styles.avaliacaoNome}>{item.usuario || "Anônimo"}</Text>
+      <Text style={styles.avaliacaoNota}>
+        Nota: {"⭐".repeat(item.nota)} ({item.nota}/10)
+      </Text>
       <Text style={styles.avaliacaoComentario}>{item.comentario}</Text>
     </View>
   );
+ 
+  const enviarComentario = async () => {
+    try {
+      if (!comentario.trim() || nota === 0) {
+        alert("Por favor, digite um comentário e selecione uma nota");
+        return;
+      }
+  
+      setLoading(true);
+      const token = await SecureStore.getItemAsync('userToken');
+      
+      const response = await api.post('/Review', {  
+        comentarios: comentario,
+        avaliacao: nota,
+        livro_id: livro.id 
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+  
+      const data = response.data;
+  
+      const newReview = {
+        _id: data._id,
+        comentario: data.comentario || data.comentarios,
+        nota: data.nota || data.avaliacao,
+        usuario: data.usuario || data.user_id?.nome || "Você"
+      }; 
 
-  const renderComentario = ({ item }) => (
-    <View style={styles.comentarioContainer}>
-      <Text style={styles.comentarioTexto}>{item}</Text>
-    </View>
-  );
-
-  const enviarComentario = () => {
-    if (comentario.trim() === '') return;
-
-    setComentarios([...comentarios, comentario]);
-
-    // Simulação de envio para o backend
-    /*
-    api.post('/comentarios', {
-      livroId: livro.id,
-      texto: comentario
-    })
-    .then(res => { ... })
-    .catch(err => { ... });
-    */
-
-    setComentario('');
+      setComentarios([...comentarios, newReview]);
+      setComentario('');
+      setNota(0);
+      alert("Avaliação enviada com sucesso!");
+  
+    } catch (error) {
+      console.error("Erro:", error);
+      Alert.alert("Erro", error.message || "Falha ao enviar avaliação");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
+    {/* //<View style={styles.container}> */}
       <View style={styles.livroContainer}>
         <Image source={{ uri: livro.imagem.url }} style={styles.livroImagem} />
         <View style={styles.livroInfo}>
@@ -86,22 +126,48 @@ export default function LiberSale() {
         <Text style={styles.whatsappButtonText}>Entrar em contato via WhatsApp</Text>
       </TouchableOpacity>
 
-      <Text style={styles.avaliacoesTitulo}>Avaliações do Vendedor</Text>
-      <FlatList
-        data={avaliacoes}
-        renderItem={renderAvaliacao}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.avaliacoesList}
-      />
+      <Text style={styles.avaliacoesTitulo}>Avaliações do Livro e Vendedor</Text>
+      
+      {loading && <Text style={{color: '#fff'}}>Carregando avaliações...</Text>}
 
-      <Text style={styles.avaliacoesTitulo}>Comentários</Text>
-      <FlatList
+      {/* <FlatList
+        scrollEnabled={false}
         data={comentarios}
-        renderItem={renderComentario}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.avaliacoesList}
-      />
+        renderItem={renderAvaliacao}
+        keyExtractor={(item) => item._id?.toString() || Math.random().toString()}
+        //keyExtractor={(item, index) => item._id ? item._id.toString() : index.toString()}
+        ListEmptyComponent={
+          <View style={{marginVertical: 20, paddingHorizontal: 15}}>
+            <Text style={{color: '#fff', textAlign: 'center'}}>
+              Nenhuma avaliação ainda. Seja o primeiro a avaliar!
+            </Text>
+          </View>
+        }
+      /> */}
+      
+      {comentarios.length > 0 ? (
+        <View style={styles.avaliacoesList}>
+          {comentarios.map((item) => (
+            <View key={item._id?.toString() || Math.random().toString()} style={styles.avaliacaoContainer}>
+              <Text style={styles.avaliacaoNome}>{item.usuario || "Anônimo"}</Text>
+              <Text style={styles.avaliacaoNota}>
+                Nota: {"⭐".repeat(item.nota)} ({item.nota}/10)
+              </Text>
+              <Text style={styles.avaliacaoComentario}>{item.comentario}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={{marginVertical: 20, paddingHorizontal: 15}}>
+          <Text style={{color: '#fff', textAlign: 'center'}}>
+            Nenhuma avaliação ainda. Seja o primeiro a avaliar!
+          </Text>
+        </View>
+      )}
 
+      <Text style={styles.avaliacoesTitulo}>Deixe seu comentário e avaliação sobre o livro ou vendedor: </Text>
+
+      {/*toda a parte de inserir comentario com avaliação*/}
       <View style={styles.comentarioInputContainer}>
         <TextInput
           placeholder="Deixe um comentário sobre o livro ou o vendedor..."
@@ -111,10 +177,29 @@ export default function LiberSale() {
           onChangeText={setComentario}
           multiline
         />
-        <TouchableOpacity style={styles.enviarBotao} onPress={enviarComentario}>
-          <Text style={styles.enviarTexto}>Enviar</Text>
-        </TouchableOpacity>
-      </View>
+        
+        <View style={{flexDirection: 'row', alignItems: 'center', marginVertical: 10}}>
+          <Text style={{marginRight: 10}}>Nota:</Text>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
+            <TouchableOpacity 
+              key={item}
+              onPress={() => setNota(item)}
+              style={{
+                padding: 8,
+                backgroundColor: nota === item ? '#6200ee' : '#ddd',
+                borderRadius: 5,
+                marginRight: 5
+              }}
+            >
+              <Text style={{color: nota === item ? 'white' : 'black'}}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+    <TouchableOpacity style={styles.enviarBotao} onPress={enviarComentario}>
+      <Text style={styles.enviarTexto}>Enviar</Text>
+    </TouchableOpacity>
+  </View>
     </ScrollView>
   );
 }
@@ -182,9 +267,14 @@ const styles = StyleSheet.create({
   },
   avaliacaoContainer: {
     backgroundColor: '#FFF',
-    padding: 10,
+    padding: 15,
     borderRadius: 8,
     marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   avaliacaoNome: {
     fontSize: 16,
@@ -193,7 +283,7 @@ const styles = StyleSheet.create({
   },
   avaliacaoNota: {
     fontSize: 14,
-    color: '#FFD700',
+    color: '#FFD700', 
     marginVertical: 4,
   },
   avaliacaoComentario: {

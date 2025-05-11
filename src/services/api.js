@@ -4,7 +4,7 @@ import { Platform, Alert } from 'react-native';
 
 // Configuração base da API
 const api = axios.create({
-  baseURL: 'http://192.168.0.105:3000',
+  baseURL: `http://192.168.1.9:3000`,
   timeout: 10000,
   headers: {
     'Accept': 'application/json',
@@ -138,18 +138,18 @@ const setupResponseInterceptors = () => {
         userMessage: 'Ocorreu um erro. Tente novamente.'
       };
 
-      // Log de erros não silenciosos
-      if (![400, 404].includes(status)) {
-        console.error('[API Error]', {
-          message: error.message,
-          code: error.code,
-          status,
-          data,
-          url
-        });
-      }
+      // // Log de erros não silenciosos
+      // if (![400, 404].includes(status)) {
+      //   console.error('[API Error]', {
+      //     message: error.message,
+      //     code: error.code,
+      //     status,
+      //     data,
+      //     url
+      //   });
+      // }
 
-      return Promise.reject(errorToReject);
+      // return Promise.reject(errorToReject);
     }
   );
 };

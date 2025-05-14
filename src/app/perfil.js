@@ -1,6 +1,5 @@
-// app/perfil.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, FlatList, Image, ScrollView } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +11,8 @@ export default function Perfil() {
   const [email, setEmail] = useState('');
   const [contato, setContato] = useState('');
   const [loading, setLoading] = useState(true);
+  const [livros, setLivros] = useState([]);
+  const [loadingLivros, setLoadingLivros] = useState(false);
 
   const [editando, setEditando] = useState(false);
   const [novoNome, setNovoNome] = useState(nome);
@@ -24,14 +25,13 @@ export default function Perfil() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Obter o ID do usuário do token ou AsyncStorage
         const token = await AsyncStorage.getItem('@auth_token');
-        console.log('Token:', token);
+        
         if (!token) {
           router.push('/login');
           return;
         }
-        const decoded = jwtDecode(token);  // Você precisará instalar e importar jwt-decode
+        const decoded = jwtDecode(token);
         const userId = decoded.id;
 
         const response = await api.get(`/users/${userId}`);
@@ -40,13 +40,16 @@ export default function Perfil() {
         setNome(userData.nome || '');
         setEmail(userData.email || '');
         setContato(userData.contato?.toString() || '');
-        // Inicializa também os estados de edição
+        
         setNovoNome(userData.nome || '');
         setNovoEmail(userData.email || '');
         setNovoContato(userData.contato?.toString() || '');
+
+        //pegar livros do usuário
+        await fetchLivrosUsuario(userId);
         
       } catch (error) {
-        console.error('Erro ao buscar dados do usuário:', error);
+        
         if (error.response?.status === 401) {
           Alert.alert('Sessão expirada', 'Por favor, faça login novamente');
           router.push('/login');
@@ -58,6 +61,81 @@ export default function Perfil() {
 
     fetchUserData();
   }, []);
+
+  //buscar livros do usuário
+  const fetchLivrosUsuario = async (userId) => {
+    try {
+      setLoadingLivros(true);
+      const response = await api.get(`/livros/meus_livros/${userId}`);
+      
+      const formattedBooks = response.data.books.map(book => ({
+        _id: book.id,
+        titulo: book.titulo,
+        autor: book.autor,
+        preco: book.preco,
+        imagem: {
+          url: book.imagem.url
+        }
+      }));
+      
+      setLivros(formattedBooks);
+    } catch (error) {
+      
+      Alert.alert('Erro', 'Não foi possível carregar os livros');
+    } finally {
+      setLoadingLivros(false);
+    }
+  };
+
+  //deletar livro
+  const deletarLivro = async (livroId) => {
+    try {
+      Alert.alert(
+        'Confirmar',
+        'Deseja realmente excluir este livro?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Excluir', 
+            onPress: async () => {
+              const token = await AsyncStorage.getItem('@auth_token');
+              const decoded = jwtDecode(token);
+              const userId = decoded.id;
+              
+              await api.delete(`/livros/deletar/${livroId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              
+              //atualiza lista de livros
+              await fetchLivrosUsuario(userId);
+              Alert.alert('Sucesso', 'Livro excluído com sucesso');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      
+      Alert.alert('Erro', 'Falha ao excluir o livro');
+    }
+  };
+  
+  // Renderizar item da lista de livros
+  const renderLivro = ({ item }) => (
+    <View style={styles.livroContainer}>
+      <Image source={{ uri: item.imagem.url }} style={styles.livroImagem} />
+      <View style={styles.livroInfo}>
+        <Text style={styles.livroTitulo}>{item.titulo}</Text>
+        <Text style={styles.livroAutor}>{item.autor}</Text>
+        <Text style={styles.livroPreco}>R$ {item.preco.toFixed(2)}</Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.deleteButton}
+        onPress={() => deletarLivro(item._id)}
+      >
+        <MaterialIcons name="delete" size={24} color="#ff4444" />
+      </TouchableOpacity>
+    </View>
+  );
 
   //salvar dados
   const handleSalvar = async () => {
@@ -155,13 +233,6 @@ export default function Perfil() {
     setNovoContato(contato);
   };
 
-  // const handleSalvar = () => {
-  //   setNome(novoNome);
-  //   setEmail(novoEmail);
-  //   setContato(novoContato);
-  //   setEditando(false);
-  // };
-
   const handleHome = () => router.push('/home');
   const handleCadastro = () => router.push('/cadastroLivro');
 
@@ -170,48 +241,66 @@ export default function Perfil() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.innerContainer}>
-        <Text style={styles.header}>Perfil do Usuário</Text>
+      <ScrollView>
+        <View style={styles.innerContainer}>
+          <Text style={styles.header}>Perfil do Usuário</Text>
 
-        <TextInput
-          style={styles.input}
-          value={editando ? novoNome : nome}
-          onChangeText={setNovoNome}
-          editable={editando}
-          placeholder="Nome"
-        />
-        <TextInput
-          style={styles.input}
-          value={editando ? novoEmail : email}
-          onChangeText={setNovoEmail}
-          editable={editando}
-          placeholder="E-mail"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          value={editando ? novoContato : contato}
-          onChangeText={setNovoContato}
-          editable={editando}
-          placeholder="Contato"
-          keyboardType="phone-pad"
-        />
+          <TextInput
+            style={styles.input}
+            value={editando ? novoNome : nome}
+            onChangeText={setNovoNome}
+            editable={editando}
+            placeholder="Nome"
+          />
+          <TextInput
+            style={styles.input}
+            value={editando ? novoEmail : email}
+            onChangeText={setNovoEmail}
+            editable={editando}
+            placeholder="E-mail"
+            keyboardType="email-address"
+          />
+          <TextInput
+            style={styles.input}
+            value={editando ? novoContato : contato}
+            onChangeText={setNovoContato}
+            editable={editando}
+            placeholder="Contato"
+            keyboardType="phone-pad"
+          />
 
-        {!editando ? (
-          <TouchableOpacity style={styles.button} onPress={handleAlterar}>
-            <Text style={styles.buttonText}>Alterar Dados</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.editButtons}>
-            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCancelar}>
-              <Text style={styles.buttonText}>Cancelar</Text>
+          {!editando ? (
+            <TouchableOpacity style={styles.button} onPress={handleAlterar}>
+              <Text style={styles.buttonText}>Alterar Dados</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={handleSalvar}>
-              <Text style={styles.buttonText}>Salvar</Text>
-            </TouchableOpacity>
+          ) : (
+            <View style={styles.editButtons}>
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCancelar}>
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={handleSalvar}>
+                <Text style={styles.buttonText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+            <Text style={styles.sectionTitle}>Meus Livros Publicados</Text>
+            
+            {loadingLivros ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : livros.length > 0 ? (
+              <FlatList
+                data={livros}
+                renderItem={renderLivro}
+                keyExtractor={item => item._id}
+                style={styles.livrosList}
+                scrollEnabled={false}
+              />
+            ) : (
+              <Text style={styles.emptyText}>Você ainda não publicou nenhum livro</Text>
+            )}
           </View>
-        )}
-      </View>
+      </ScrollView>
 
       {/* Barra Inferior */}
       <View style={styles.bottomBar}>
@@ -314,5 +403,60 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#8B008B',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 30,
+    marginBottom: 15,
+    alignSelf: 'flex-start',
+  },
+  livroContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6A006A',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    width: '100%',
+  },
+  livroImagem: {
+    width: 50,
+    height: 70,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  livroInfo: {
+    flex: 1,
+  },
+  livroTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  livroAutor: {
+    fontSize: 14,
+    color: '#ddd',
+  },
+  livroPreco: {
+    fontSize: 16,
+    color: '#FFD700',
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  emptyText: {
+    color: '#ccc',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  livrosList: {
+    width: '100%',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 60, 
   },
 });

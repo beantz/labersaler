@@ -2,9 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, Alert } from 'react-native';
 
-// Configuração base da API
 const api = axios.create({
-  baseURL: `http://192.168.1.9:3000`,
+  baseURL: `http://192.168.0.105:3000`,
   timeout: 10000,
   headers: {
     'Accept': 'application/json',
@@ -12,7 +11,6 @@ const api = axios.create({
   }
 });
 
-// Objeto para controle de erros exibidos
 const errorDisplay = {
   lastShown: null,
   cooldown: 5000 // 5 segundos entre erros iguais
@@ -88,68 +86,70 @@ api.interceptors.request.use(async (config) => {
  * Interceptor para tratamento de respostas
  */
 const setupResponseInterceptors = () => {
-  // Log de respostas bem-sucedidas
-  api.interceptors.response.use(response => {
-    console.debug(`[Response] ${response.status} ${response.config.url}`, response.data);
-    return response;
-  });
-
-  // Tratamento centralizado de erros
   api.interceptors.response.use(
-    response => response,
+    response => {
+      console.debug(`[Response] ${response.status} ${response.config.url}`, response.data);
+      return response;
+    },
     async (error) => {
       const { response, config } = error;
       const status = response?.status;
       const data = response?.data;
       const url = config?.url;
 
-      // Tratamento específico para erros de autenticação
-      if (status === 401) {
-        const isLoginRoute = url?.includes('/login');
-        const isWrongPassword = data?.message?.includes('Senha incorreta');
-        
-        if (isLoginRoute && isWrongPassword) {
-          // Não remove token pois é tentativa de login
-          return Promise.reject({
-            ...error,
-            isAuthError: true,
-            userMessage: 'E-mail ou senha incorretos'
-          });
-        } else {
-          // Token inválido/expirado - faz logout
-          try {
-            await AsyncStorage.removeItem('@auth_token');
-            delete api.defaults.headers.common['Authorization'];
-          } catch (storageError) {
-            console.error('[Token Removal Error]', storageError);
+      //aqui filtra os erros
+      const isLoginError = status === 401 && url?.includes('/login');
+      const isCodeValidationError = status === 400 && url?.includes('/validar-codigo');
+      const isValidationError = status === 400 && data?.errors;
+      const isDeleteComment403 = status === 403 && url?.includes('/Review/DeletarComentario/');
+  
+      // Log detalhado para debugging
+      if (!isDeleteComment403 && !isValidationError && !isCodeValidationError && !isLoginError) {
+        console.error('[API Error]', {
+          status,
+          url,
+          message: error.message,
+          data,
+          config: {
+            method: config?.method,
+            data: config?.data
           }
-          return Promise.reject({
-            ...error,
-            isAuthError: true,
-            userMessage: 'Sessão expirada. Faça login novamente.'
-          });
-        }
+        });
       }
-
-      // Tratamento de outros erros
-      const errorToReject = {
+  
+      //tratamento específico para erros conhecidos
+      let userMessage = 'Erro desconhecido';
+      if (status === 400 && data?.errors) {
+        userMessage = data.errors.map(err => err.msg).join('\n') || 'Dados inválidos';
+      } else if (status === 400 && url?.includes('/validar-codigo')) {
+        userMessage = data?.error || 'Código inválido'; // Mensagem específica para códigos
+      } else if (status === 401) {
+        userMessage = data?.message || 'Sessão expirada. Faça login novamente.';
+        if (!url?.includes('/login')) {
+          await AsyncStorage.removeItem('@auth_token');
+          delete api.defaults.headers.common['Authorization'];
+        }
+        await AsyncStorage.removeItem('@auth_token');
+        delete api.defaults.headers.common['Authorization'];
+      } else if (status === 403) {
+        userMessage = data?.message || 'Você não tem permissão para esta ação';
+      } else if (status === 404) {
+        userMessage = 'Recurso não encontrado';
+      } else if (status === 500) {
+        userMessage = 'Erro interno no servidor';
+      } else if (data?.message) {
+        userMessage = data.message;
+      }
+  
+      // Retorna um erro formatado para o frontend
+      return Promise.reject({
         ...error,
-        isAuthError: false,
-        userMessage: 'Ocorreu um erro. Tente novamente.'
-      };
-
-      // // Log de erros não silenciosos
-      // if (![400, 404].includes(status)) {
-      //   console.error('[API Error]', {
-      //     message: error.message,
-      //     code: error.code,
-      //     status,
-      //     data,
-      //     url
-      //   });
-      // }
-
-      // return Promise.reject(errorToReject);
+        userMessage,
+        isAuthError: status === 401,
+        isValidationError: status === 400 && data?.errors || isCodeValidationError,
+        isServerError: status >= 500,
+        isLoginError: isLoginError
+      });
     }
   );
 };

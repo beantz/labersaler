@@ -1,69 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, FlatList,TextInput, Linking, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, TextInput, Linking, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import api from '../services/api.js';
 import * as SecureStore from 'expo-secure-store';
 
 export default function Book() {
   const [comentario, setComentario] = useState('');
-  const [comentarios, setComentarios] = useState([]);
+  const [nota, setNota] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const params = useLocalSearchParams();
   const livro = JSON.parse(params.livroData);
-  const [nota, setNota] = useState(0);
 
+  // Busca os reviews do livro ao carregar a tela
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         setLoading(true);
         
-        const response = await api.get(`/Review/${livro._id}`);
-
-        console.log("Dados recebidos:", response.data); 
+        const response = await api.get(`/Review/${livro.id}`);
         
-        const reviewsData = response.data.map(review => ({
-          _id: review._id,
-          comentario: review.comentario,
-          nota: review.nota,
-          usuario: review.usuario
-        }));
-        // const reviewsData = response.data.map(review => ({
-        //   _id: review._id || Math.random().toString(),
-        //   comentario: review.comentario || review.comentarios || "",
-        //   nota: review.nota || review.avaliacao || 0,
-        //   usuario: review.usuario || review.user_id?.nome || "Anônimo"
-        // }));
+        // Verificação mais robusta da resposta
+        if (!response || !response.data) {
+          throw new Error('Resposta da API inválida');
+        }
+    
+        // Adaptação para a estrutura do seu backend
+        const reviewsData = Array.isArray(response.data) 
+          ? response.data.map(review => ({
+              _id: review._id,
+              comentario: review.comentario || review.comentarios || "",
+              nota: review.nota || review.avaliacao || 0,
+              usuario: review.usuario || review.user_id?.nome || "Anônimo"
+            }))
+          : [];
+    
+        console.log('Reviews processados:', reviewsData);
+        setReviews(reviewsData);
+    
+      } catch (error) {
+        console.error("Erro detalhado:", {
+          message: error.message,
+          response: error.response?.data,
+          stack: error.stack
+        });
         
-        setComentarios(reviewsData);
-        
-      } catch (err) {
-        console.error("Erro detalhado:", err);
-        setError(err.message || "Erro ao carregar avaliações");
+        // Tratamento específico para erros de API
+        if (error.response) {
+          if (error.response.status === 404) {
+            Alert.alert("Erro", "Livro não encontrado");
+          } else {
+            Alert.alert("Erro", "Falha ao carregar avaliações");
+          }
+        } else {
+          Alert.alert("Erro", "Problema de conexão");
+        }
       } finally {
         setLoading(false);
       }
     };
-  
-    if (livro && livro._id) {
-      fetchReviews();
-    }
-  }, [livro?._id]);
 
-  const renderAvaliacao = ({ item }) => (
-    <View style={styles.avaliacaoContainer}>
-      <Text style={styles.avaliacaoNome}>{item.usuario || "Anônimo"}</Text>
-      <Text style={styles.avaliacaoNota}>
-        Nota: {"⭐".repeat(item.nota)} ({item.nota}/10)
-      </Text>
-      <Text style={styles.avaliacaoComentario}>{item.comentario}</Text>
-    </View>
-  );
- 
+    fetchReviews();
+  }, [livro._id]);
+
   const enviarComentario = async () => {
     try {
       if (!comentario.trim() || nota === 0) {
-        alert("Por favor, digite um comentário e selecione uma nota");
+        Alert.alert("Atenção", "Por favor, digite um comentário e selecione uma nota");
         return;
       }
   
@@ -80,31 +83,104 @@ export default function Book() {
         }
       });
   
-      const data = response.data;
+      // Verificação da resposta
+      if (!response || !response.data) {
+        throw new Error('Resposta da API inválida');
+      }
   
+      // Cria o novo review com estrutura compatível
       const newReview = {
-        _id: data._id,
-        comentario: data.comentario || data.comentarios,
-        nota: data.nota || data.avaliacao,
-        usuario: data.usuario || data.user_id?.nome || "Você"
-      }; 
-
-      setComentarios([...comentarios, newReview]);
+        _id: response.data._id || Date.now().toString(),
+        comentario: response.data.comentario || response.data.comentarios || comentario,
+        nota: response.data.nota || response.data.avaliacao || nota,
+        usuario: response.data.usuario || "Você"
+      };
+  
+      setReviews(prev => [newReview, ...prev]);
       setComentario('');
       setNota(0);
-      alert("Avaliação enviada com sucesso!");
+      Alert.alert("Sucesso", "Avaliação enviada com sucesso!");
   
     } catch (error) {
-      console.error("Erro:", error);
-      Alert.alert("Erro", error.message || "Falha ao enviar avaliação");
+      console.error("Erro ao enviar comentário:", {
+        message: error.message,
+        response: error.response?.data
+      });
+      
+      let errorMessage = "Falha ao enviar avaliação";
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = "Você precisa estar logado para avaliar";
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      Alert.alert("Erro", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  const deletarComentario = async (reviewId) => {
+    try {
+      const token = await SecureStore.getItemAsync('userToken');
+      
+      Alert.alert(
+        "Confirmar",
+        "Tem certeza que deseja excluir este comentário?",
+        [
+          {
+            text: "Cancelar",
+            style: "cancel"
+          },
+          { 
+            text: "Excluir", 
+            onPress: async () => {
+              setLoading(true);
+              try {
+                const response = await api.delete(`/Review/DeletarComentario/${reviewId}`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                
+                if(response.data.success) {
+                  setReviews(prev => prev.filter(review => review._id !== reviewId));
+                  Alert.alert("Sucesso", response.data.message || "Comentário excluído com sucesso");
+                } else {
+                  Alert.alert("Erro", response.data.message || "Falha ao excluir comentário");
+                }
+              } catch (error) {
+                if (error.response) {
+                  if (error.response.status === 400) {
+                    Alert.alert("Erro", "ID da avaliação inválido");
+                  } else if (error.response.status === 403) {
+                    Alert.alert("Erro", "Você não tem permissão para excluir esta avaliação");
+                  } else if (error.response.status === 404) {
+                    Alert.alert("Erro", "Avaliação não encontrada");
+                  } else {
+                    Alert.alert("Erro", error.response.data?.message || "Falha ao excluir comentário");
+                  }
+                } else {
+                  Alert.alert("Erro", "Problema de conexão");
+                }
+              } finally {
+                setLoading(false);
+              }
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error("Erro ao deletar comentário:", error);
+      Alert.alert("Erro", error.message || "Falha ao excluir comentário");
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
-    {/* //<View style={styles.container}> */}
       <View style={styles.livroContainer}>
         <Image source={{ uri: livro.imagem.url }} style={styles.livroImagem} />
         <View style={styles.livroInfo}>
@@ -126,51 +202,43 @@ export default function Book() {
         <Text style={styles.whatsappButtonText}>Entrar em contato via WhatsApp</Text>
       </TouchableOpacity>
 
-      <Text style={styles.avaliacoesTitulo}>Avaliações do Livro e Vendedor</Text>
+      {/* Seção de Reviews */}
+      <Text style={styles.avaliacoesTitulo}>Avaliações ({reviews.length})</Text>
       
-      {loading && <Text style={{color: '#fff'}}>Carregando avaliações...</Text>}
-
-      {/* <FlatList
-        scrollEnabled={false}
-        data={comentarios}
-        renderItem={renderAvaliacao}
-        keyExtractor={(item) => item._id?.toString() || Math.random().toString()}
-        //keyExtractor={(item, index) => item._id ? item._id.toString() : index.toString()}
-        ListEmptyComponent={
-          <View style={{marginVertical: 20, paddingHorizontal: 15}}>
-            <Text style={{color: '#fff', textAlign: 'center'}}>
-              Nenhuma avaliação ainda. Seja o primeiro a avaliar!
-            </Text>
-          </View>
-        }
-      /> */}
+      {loading && <Text style={styles.carregando}>Carregando avaliações...</Text>}
       
-      {comentarios.length > 0 ? (
-        <View style={styles.avaliacoesList}>
-          {comentarios.map((item) => (
-            <View key={item._id?.toString() || Math.random().toString()} style={styles.avaliacaoContainer}>
-              <Text style={styles.avaliacaoNome}>{item.usuario || "Anônimo"}</Text>
-              <Text style={styles.avaliacaoNota}>
-                Nota: {"⭐".repeat(item.nota)} ({item.nota}/10)
+      {reviews.length > 0 ? (
+        <View style={styles.reviewsContainer}>
+          {reviews.map((review) => (
+            <View key={review._id} style={styles.reviewItem}>
+              <View style={styles.reviewHeader}>
+                <Text style={styles.reviewUsuario}>{review.usuario || "Anônimo"}</Text>
+                <TouchableOpacity 
+                  onPress={() => deletarComentario(review._id)}
+                  style={styles.deleteButton}
+                >
+                  <Text style={styles.deleteButtonText}>×</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.reviewNota}>
+                Nota: {"⭐".repeat(review.nota)} ({review.nota}/10)
               </Text>
-              <Text style={styles.avaliacaoComentario}>{item.comentario}</Text>
+              <Text style={styles.reviewComentario}>{review.comentario}</Text>
             </View>
           ))}
         </View>
       ) : (
-        <View style={{marginVertical: 20, paddingHorizontal: 15}}>
-          <Text style={{color: '#fff', textAlign: 'center'}}>
-            Nenhuma avaliação ainda. Seja o primeiro a avaliar!
-          </Text>
-        </View>
+        <Text style={styles.semAvaliacoes}>
+          Nenhuma avaliação ainda. Seja o primeiro a avaliar!
+        </Text>
       )}
 
-      <Text style={styles.avaliacoesTitulo}>Deixe seu comentário e avaliação sobre o livro ou vendedor: </Text>
-
-      {/*toda a parte de inserir comentario com avaliação*/}
+      {/* Formulário para novo review */}
+      <Text style={styles.avaliacoesTitulo}>Deixe sua avaliação:</Text>
+      
       <View style={styles.comentarioInputContainer}>
         <TextInput
-          placeholder="Deixe um comentário sobre o livro ou o vendedor..."
+          placeholder="Escreva seu comentário..."
           placeholderTextColor="#888"
           style={styles.input}
           value={comentario}
@@ -178,28 +246,32 @@ export default function Book() {
           multiline
         />
         
-        <View style={{flexDirection: 'row', alignItems: 'center', marginVertical: 10}}>
-          <Text style={{marginRight: 10}}>Nota:</Text>
+        <View style={styles.notaContainer}>
+          <Text style={styles.notaLabel}>Nota:</Text>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => (
             <TouchableOpacity 
               key={item}
               onPress={() => setNota(item)}
-              style={{
-                padding: 8,
-                backgroundColor: nota === item ? '#6200ee' : '#ddd',
-                borderRadius: 5,
-                marginRight: 5
-              }}
+              style={[
+                styles.notaButton,
+                { backgroundColor: nota === item ? '#6200ee' : '#ddd' }
+              ]}
             >
               <Text style={{color: nota === item ? 'white' : 'black'}}>{item}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-    <TouchableOpacity style={styles.enviarBotao} onPress={enviarComentario}>
-      <Text style={styles.enviarTexto}>Enviar</Text>
-    </TouchableOpacity>
-  </View>
+        <TouchableOpacity 
+          style={styles.enviarBotao} 
+          onPress={enviarComentario}
+          disabled={loading}
+        >
+          <Text style={styles.enviarTexto}>
+            {loading ? "Enviando..." : "Enviar Avaliação"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -261,34 +333,40 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 10,
+    marginTop: 20,
   },
-  avaliacoesList: {
+  reviewsContainer: {
     marginBottom: 20,
   },
-  avaliacaoContainer: {
+  reviewItem: {
     backgroundColor: '#FFF',
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  avaliacaoNome: {
+  reviewUsuario: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
-  avaliacaoNota: {
+  reviewNota: {
     fontSize: 14,
-    color: '#FFD700', 
+    color: '#FFD700',
     marginVertical: 4,
   },
-  avaliacaoComentario: {
+  reviewComentario: {
     fontSize: 14,
     color: '#666',
+  },
+  semAvaliacoes: {
+    color: '#fff',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  carregando: {
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   comentarioInputContainer: {
     backgroundColor: '#fff',
@@ -306,24 +384,51 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 10,
   },
+  notaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    flexWrap: 'wrap',
+  },
+  notaLabel: {
+    marginRight: 10,
+    color: '#000',
+  },
+  notaButton: {
+    padding: 8,
+    borderRadius: 5,
+    marginRight: 5,
+    marginBottom: 5,
+  },
   enviarBotao: {
     backgroundColor: '#6A006A',
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
+    opacity: 1,
   },
   enviarTexto: {
     color: '#fff',
     fontWeight: 'bold',
   },
-  comentarioContainer: {
-    backgroundColor: '#EEE',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  comentarioTexto: {
-    fontSize: 14,
-    color: '#333',
+  deleteButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });

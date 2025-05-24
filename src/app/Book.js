@@ -11,6 +11,8 @@ export default function Book() {
   const [reviews, setReviews] = useState([]);
   const params = useLocalSearchParams();
   const livro = JSON.parse(params.livroData);
+  const [livroById, setLivroById] = useState(''); 
+
 
   // Busca os reviews do livro ao carregar a tela
   useEffect(() => {
@@ -63,6 +65,32 @@ export default function Book() {
     fetchReviews();
   }, [livro._id]);
 
+  useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/livros/${livro.id}`);
+        
+        // Ajuste conforme a estrutura real da sua API
+        // Se a resposta for { success: true, livro: {...} }
+        if (response.data && response.data.livro) {
+          setLivroById(response.data.livro);
+        } 
+        // Se a resposta for diretamente o objeto livro
+        else if (response.data) {
+          setLivroById(response.data);
+        }
+      } catch (error) {
+        Alert.alert("Erro", "Não foi possível carregar os dados do livro");
+        console.error("Erro detalhado:", error.response?.data || error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBook();
+  }, [livro.id]);
+  
   const enviarComentario = async () => {
     try {
       if (!comentario.trim() || nota === 0) {
@@ -188,18 +216,62 @@ export default function Book() {
           <Text style={styles.livroAutor}>{livro.autor}</Text>
           <Text style={styles.livroPreco}>R$ {livro.preco.toFixed(2)}</Text>
           <Text style={styles.livroDescricao}>{livro.descricao}</Text>
+
+           {/* Adicione esta seção para visualizar os dados do vendedor */}
+          <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#fff', paddingTop: 10 }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Vendedor:</Text>
+            <Text style={{ color: '#fff' }}>{livroById.vendedor?.nome || 'Nome não disponível'}</Text>
+            <Text style={{ color: '#fff' }}>Contato: {livroById.vendedor?.contato || 'Não informado'}</Text>
+          </View>
         </View>
       </View>
 
       <TouchableOpacity
-        onPress={() => {
-          const mensagem = `Oi, estou interessado no livro "${livro.titulo}". Gostaria de mais informações.`;
-          const url = `https://wa.me/${livro.vendedorTelefone}?text=${encodeURIComponent(mensagem)}`;
-          Linking.openURL(url).catch(() => Alert.alert("Erro", "Não foi possível abrir o WhatsApp"));
+        onPress={async () => {
+          try {
+            
+            if (!livroById?.vendedor?.contato) {
+              Alert.alert("Erro", "Contato do vendedor não disponível");
+              return;
+            }
+
+            const numeroLimpo = livroById.vendedor.contato.toString().replace(/\D/g, '');
+            
+            if (numeroLimpo.length < 10) {
+              Alert.alert("Erro", "Número de contato inválido");
+              return;
+            }
+
+            //adiciona 55 se necessario
+            const numeroFormatado = numeroLimpo.length === 11 ? `55${numeroLimpo}` : `55${numeroLimpo}`;
+
+            const url = `https://wa.me/${numeroFormatado}`;
+            
+            // Verifica se pode abrir o link
+            const canOpen = await Linking.canOpenURL(url);
+            
+            if (canOpen) {
+              await Linking.openURL(url);
+            } else {
+              Alert.alert("Erro", "WhatsApp não está instalado");
+            }
+          } catch (error) {
+            
+            Alert.alert("Erro", "Não foi possível abrir o WhatsApp");
+          }
         }}
-        style={styles.whatsappButton}
+        style={[
+          styles.whatsappButton,
+          !livroById?.vendedor?.contato && { opacity: 0.6 }
+        ]}
+        disabled={!livroById?.vendedor?.contato || loading}
       >
-        <Text style={styles.whatsappButtonText}>Entrar em contato via WhatsApp</Text>
+        <Text style={styles.whatsappButtonText}>
+          {loading ? "Carregando..." : 
+          !livroById?.vendedor?.contato 
+            ? "Contato indisponível" 
+            : "Entrar em contato via WhatsApp"}
+        </Text>
       </TouchableOpacity>
 
       {/* Seção de Reviews */}

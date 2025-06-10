@@ -80,7 +80,7 @@ const LoginScreen = () => {
       ) : (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.innerContainer}>
           <MaterialCommunityIcons name="book-open-variant" size={60} color='#007BFF' />
-          <Text style={styles.title}>Laber-Sale</Text>
+          <Text style={styles.title}>Liber-Sale</Text>
           <Text style={styles.title}>Realize seu Login</Text>
 
           <View style={styles.inputWrapper}>

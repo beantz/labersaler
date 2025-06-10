@@ -15,7 +15,7 @@ const ForgotPasswordScreen = () => {
     try {
       let response = await api.post('/esqueci-senha', { email });
 
-       // Verifica se a requisição foi bem-sucedida (status 2xx)
+      
        if (response.status >= 200 && response.status < 300) {
         Alert.alert('Sucesso', 'Verifique seu email para redefinir a senha.', [
             {
@@ -27,7 +27,6 @@ const ForgotPasswordScreen = () => {
             },
         ]);
         } else {
-            // Se a API retornar um erro com corpo JSON
             const errorData = response.data || {};
             const errorMessage = errorData.errors?.[0]?.msg || 
                                 errorData.message || 
@@ -45,7 +44,6 @@ const ForgotPasswordScreen = () => {
           fieldErrors[err.path].push(err.msg);
         });
       
-        // Mostra apenas o primeiro erro do primeiro campo com erro
         const firstField = Object.keys(fieldErrors)[0];
         Alert.alert(
           firstField === 'email' ? 'Erro no email' : 'Erro no formulário',
@@ -80,7 +78,6 @@ const ForgotPasswordScreen = () => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      {/* <Button title="Recuperar Senha" onPress={handleResetPassword} /> */}
     </View>
 
     <TouchableOpacity style={styles.button} onPress={handleResetPassword}>

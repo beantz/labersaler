@@ -105,13 +105,12 @@ export default function HomePage() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Barra Superior */}
       <View style={styles.topBar}>
         <Text style={styles.header}>LiberSale</Text>
       </View>
 
       <View style={styles.innerContainer}>
-        {/* Campo de busca e botões */}
+    
         <View style={styles.searchRow}>
           <TextInput
             style={styles.input}
@@ -136,7 +135,6 @@ export default function HomePage() {
           )}
         </View>
 
-        {/* Lista de livros */}
         <FlatList
           data={livrosFiltrados}
           renderItem={renderLivro}
@@ -153,7 +151,6 @@ export default function HomePage() {
         />
       </View>
 
-      {/* Modal de categorias */}
       <Modal
         visible={mostrarModal}
         animationType="slide"
@@ -189,7 +186,6 @@ export default function HomePage() {
         </View>
       </Modal>
 
-      {/* Barra Inferior */}
       <View style={styles.bottomBar}>
         <TouchableOpacity onPress={handleHome} style={styles.iconContainer}>
           <Ionicons name="home-outline" size={24} color="#fff" />

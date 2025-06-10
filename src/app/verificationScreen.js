@@ -11,7 +11,6 @@ export default function VerificationScreen({ route }) {
   const router = useRouter();
   const [timer, setTimer] = useState(10 * 60);
 
-  // Função obrigatória para renderizar cada célula do código
   const renderCell = ({ index, symbol, isFocused }) => (
     <Text
       key={index}
@@ -54,7 +53,6 @@ export default function VerificationScreen({ route }) {
       Alert.alert('Erro', errorData.error || 'Erro ao validar código');
   
     } catch (error) {
-      // Não fazemos console.log para erros silenciosos
       if (!error.silent) {
         console.error('Erro crítico na verificação:', error);
       }
@@ -85,7 +83,6 @@ export default function VerificationScreen({ route }) {
     }
   };
 
-  // Função para atualizar o contador
   useEffect(() => {
     const interval = setInterval(() => {
       setTimer((prev) => {
@@ -115,7 +112,6 @@ export default function VerificationScreen({ route }) {
         onSubmitEditing={handleVerify}
       />
 
-      {/* Texto de contagem com a mensagem */}
       <View style={styles.timerContainer}>
         <FontAwesome name="clock-o" size={24} color="white" style={styles.icon} />
         <Text style={styles.timerText}>
@@ -123,7 +119,6 @@ export default function VerificationScreen({ route }) {
         </Text>
       </View>
 
-      {/* Ícone de email no canto superior direito */}
       <FontAwesome
         name="envelope"
         size={30}
@@ -137,7 +132,7 @@ export default function VerificationScreen({ route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#8B008B', // Cor roxa igual a tela inicial
+    backgroundColor: '#8B008B', 
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',

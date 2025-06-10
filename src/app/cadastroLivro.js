@@ -6,6 +6,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import api from '../services/api.js';
 import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 export default function CadastroLivro() {
   const [titulo, setTitulo] = useState('');
@@ -68,46 +70,57 @@ export default function CadastroLivro() {
 
   const handleCadastrarLivro = async () => {
     try {
-      if (!imagem) {
-        Alert.alert('Atenção', 'Selecione uma imagem para o livro');
-        return;
-      }
+    if (!imagem || !imagem.uri) {
+      Alert.alert('Atenção', 'Selecione uma imagem para o livro');
+      return;
+    }
 
-      const formData = new FormData();
-      formData.append('titulo', titulo);
-      formData.append('autor', autor);
-      formData.append('preco', preco);
-      formData.append('estado', estado);
-      formData.append('descricao', descricao);
-      formData.append('categoria_id', selectedCategoryName);
+    const formData = new FormData();
+    
+    formData.append('titulo', titulo);
+    formData.append('autor', autor);
+    formData.append('preco', preco);
+    formData.append('estado', estado);
+    formData.append('descricao', descricao);
+    formData.append('categoria_id', selectedCategoryName);
 
-      const fileExtension = imagem.uri.split('.').pop();
-      const fileName = `livro_${Date.now()}.${fileExtension}`;
-      formData.append('imagem', {
-        uri: imagem.uri,
-        name: fileName,
-        type: `image/${fileExtension}`,
-      });
+    let localUri = imagem.uri;
+    let filename = localUri.split('/').pop();
+    
+    let match = /\.(\w+)$/.exec(filename);
+    let type = match ? `image/${match[1]}` : 'image';
 
-      const response = await api.post('/livros/cadastrar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          const progress = Math.round((e.loaded / e.total) * 100);
-          setUploadProgress(progress);
-        },
-      });
+    formData.append('imagem', {
+      uri: Platform.OS === 'android' ? localUri : localUri.replace('file://', ''),
+      name: filename || `photo_${Date.now()}.jpg`,
+      type: type || 'image/jpeg'
+    });
 
-      if (response.data?.message) {
-        Alert.alert('Sucesso', response.data.message);
-        router.push('/home');
-      }
+    const token = await SecureStore.getItemAsync('userToken');
 
-    } catch (error) {
-      console.error('Erro ao cadastrar livro:', error);
-      const status = error.response?.status;
+    const response = await api.post('/livros/cadastrar', formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data', 
+      },
+      transformRequest: (data) => data, 
+      timeout: 30000,
+      onUploadProgress: (e) => {
+        const progress = Math.round((e.loaded / e.total) * 100);
+        setUploadProgress(progress);
+      },
+    });
 
+    if (response.data?.message) {
+      Alert.alert('Sucesso', response.data.message);
+      router.push('/home');
+    }
+
+  } catch (error) {
+    console.error('Erro completo:', error);
+    console.error('Resposta do erro:', error.response?.data);
       if (status === 400 && error.response?.data?.errors) {
-        const errorMessages = error.response.data.errors.map(err => ` ${err.msg}`);
+        const errorMessages = error.response.data.errors.map(err => `• ${err.msg}`);
         Alert.alert('Erros no formulário', errorMessages.join('\n\n'));
       } else if (status === 400 && error.response?.data?.categorias_disponiveis) {
         Alert.alert(
@@ -249,91 +262,137 @@ export default function CadastroLivro() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#8B008B' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#8B008B',
+    paddingBottom: 60,
+  },
   topBar: {
     height: 60,
     backgroundColor: '#6A006A',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 20 : 0,
   },
-  logo: { fontSize: 26, fontWeight: 'bold', color: '#f5f5f5' },
+  logo: { 
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: Platform.OS === 'ios' ? 10 : 0,
+  },
   innerContainer: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   header: {
-    fontSize: 22,
-    color: '#fff',
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#fff',
+    marginBottom: 15,
+    textAlign: 'center',
   },
   input: {
     width: '100%',
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
-    color: '#000',
-  },
-  dropdown: {
+    height: 50,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 12,
     backgroundColor: '#fff',
-    marginBottom: 16,
-  },
-  dropdownText: {
     color: '#000',
     fontSize: 14,
+    marginBottom: 12,
+  },
+  dropdown: {
+    width: '100%',
+    minHeight: 40,
+    backgroundColor: '#fff',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: '#000',
   },
   dropdownList: {
     backgroundColor: '#fff',
-    borderWidth: 1,
     borderColor: '#ccc',
+    borderWidth: 1,
     borderRadius: 8,
+    maxHeight: 200,
   },
   imageButton: {
     backgroundColor: 'blue',
-    padding: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 8,
-    marginBottom: 16,
     width: '100%',
+    marginBottom: 12,
   },
   imagePreview: {
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 160,
     borderRadius: 8,
-    marginBottom: 16,
+    resizeMode: 'contain',
+    marginBottom: 12,
     alignSelf: 'center',
+  },
+  progressContainer: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
+    marginTop: 15,
+    marginBottom: 15,
   },
   button: {
     backgroundColor: 'blue',
-    padding: 12,
+    paddingVertical: 12,
     borderRadius: 8,
     width: '48%',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
   },
   buttonSecundario: {
     backgroundColor: '#FF6347',
-    padding: 12,
+    paddingVertical: 12,
     borderRadius: 8,
     width: '48%',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 14,
     textAlign: 'center',
   },
   bottomBar: {
@@ -344,32 +403,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderColor: '#440044',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   iconContainer: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 5,
   },
   iconText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#fff',
-    marginTop: 2,
-  },
-  progressContainer: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  progressText: {
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  progressBar: {
-    height: 10,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
+    marginTop: 4,
   },
 });

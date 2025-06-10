@@ -23,24 +23,23 @@ const CadastroScreen = () => {
         contato
       });
   
-      // Se chegou aqui, cadastro foi bem-sucedido
       Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
       router.push('/login');
   
     } catch (error) {
-      // Tratamento específico para erros de validação (400)
+    
       if (error.response?.status === 400 && error.response?.data?.errors) {
   
-        // Processa os erros para exibição
+        
         const errorMessages = error.response.data.errors.map(err => {
-          // const fieldName = fieldNames[err.field] || err.field;
+  
           return ` ${err.message}`;
         }).join('\n\n');
   
         Alert.alert('Erros no formulário', errorMessages);
   
       } 
-      // Tratamento para outros tipos de erro
+    
       else {
         const errorMessage = error.response?.data?.message || 
                            'Erro ao processar o cadastro. Tente novamente.';
@@ -54,7 +53,6 @@ const CadastroScreen = () => {
     style={styles.container}
     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
   >
-    {/* Barra Superior */}
     <View style={styles.topBar}>
       <Text style={styles.header}>LiberSale</Text>
     </View>
@@ -83,11 +81,11 @@ const CadastroScreen = () => {
         style={styles.input}
         placeholder="Número de Contato"
         placeholderTextColor="#888"
-        keyboardType="phone-pad"  // Teclado numérico para telefones
+        keyboardType="phone-pad"  
         value={contato}
         onChangeText={setContato}
-        maxLength={15}  // Limite razoável para números com DDD e código de país
-        autoComplete="tel"  // Autocompletar para números de telefone
+        maxLength={15}  
+        autoComplete="tel"  
       />
 
       <TextInput

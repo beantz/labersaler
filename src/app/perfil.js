@@ -21,7 +21,6 @@ export default function Perfil() {
 
   const router = useRouter();
 
-  //buscar dados de usuario
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -45,7 +44,6 @@ export default function Perfil() {
         setNovoEmail(userData.email || '');
         setNovoContato(userData.contato?.toString() || '');
 
-        //pegar livros do usuário
         await fetchLivrosUsuario(userId);
         
       } catch (error) {
@@ -62,7 +60,6 @@ export default function Perfil() {
     fetchUserData();
   }, []);
 
-  //buscar livros do usuário
   const fetchLivrosUsuario = async (userId) => {
     try {
       setLoadingLivros(true);
@@ -87,7 +84,6 @@ export default function Perfil() {
     }
   };
 
-  //deletar livro
   const deletarLivro = async (livroId) => {
     try {
       Alert.alert(
@@ -106,7 +102,6 @@ export default function Perfil() {
                 headers: { Authorization: `Bearer ${token}` }
               });
               
-              //atualiza lista de livros
               await fetchLivrosUsuario(userId);
               Alert.alert('Sucesso', 'Livro excluído com sucesso');
             }
@@ -119,7 +114,6 @@ export default function Perfil() {
     }
   };
   
-  // Renderizar item da lista de livros
   const renderLivro = ({ item }) => (
     <View style={styles.livroContainer}>
       <Image source={{ uri: item.imagem.url }} style={styles.livroImagem} />
@@ -137,7 +131,6 @@ export default function Perfil() {
     </View>
   );
 
-  //salvar dados
   const handleSalvar = async () => {
     try {
       if (!novoNome.trim() || !novoEmail.trim() || !novoContato.trim()) {
@@ -190,10 +183,8 @@ export default function Perfil() {
         { text: 'Sair', onPress: async () => {
           try {
 
-            // chama API para invalidar token no back
             let response = await api.post('/logout').catch(() => {});
 
-            // limpa front-end
             await AsyncStorage.removeItem('@auth_token');
             delete api.defaults.headers.common['Authorization'];
 
@@ -204,7 +195,6 @@ export default function Perfil() {
             
             
           } catch (error) {
-            // Se foi um 401 por logout já realizado, trata como sucesso
             if (error.response?.status === 401 && 
               error.response?.data?.message?.includes('logout realizado')) {
               await AsyncStorage.removeItem('@auth_token');
@@ -302,7 +292,6 @@ export default function Perfil() {
           </View>
       </ScrollView>
 
-      {/* Barra Inferior */}
       <View style={styles.bottomBar}>
         <TouchableOpacity onPress={handleHome} style={styles.iconContainer}>
           <Ionicons name="home-outline" size={24} color="#fff" />

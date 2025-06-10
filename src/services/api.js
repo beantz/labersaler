@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, Alert } from 'react-native';
 
+
 const api = axios.create({
   baseURL: `http://192.168.0.105:3000`,
   timeout: 10000,
@@ -72,10 +73,6 @@ api.interceptors.request.use(async (config) => {
   if (config.data instanceof FormData) {
     config.headers['Content-Type'] = 'multipart/form-data';
     
-    if (Platform.OS === 'android') {
-      config.headers['Accept'] = 'application/json';
-      config.headers['Content-Type'] = 'multipart/form-data; boundary=someArbitraryBoundary';
-    }
   }
   return config;
 }, (error) => {
@@ -102,9 +99,12 @@ const setupResponseInterceptors = () => {
       const isCodeValidationError = status === 400 && url?.includes('/validar-codigo');
       const isValidationError = status === 400 && data?.errors;
       const isDeleteComment403 = status === 403 && url?.includes('/Review/DeletarComentario/');
-  
+      const isEmailNotFound404 = status === 404 && url?.includes('/login') && data?.message === 'E-mail não encontrado'; 
+      const isHtmlError = typeof data === 'string' && data.includes('<!DOCTYPE html>');
+      const isNetworkError = error.message === 'Network Error';
+
       // Log detalhado para debugging
-      if (!isDeleteComment403 && !isValidationError && !isCodeValidationError && !isLoginError) {
+      if (!isDeleteComment403 && !isHtmlError && !isValidationError && !isCodeValidationError && !isLoginError && !isEmailNotFound404  && !isNetworkError) {
         console.error('[API Error]', {
           status,
           url,
@@ -119,10 +119,12 @@ const setupResponseInterceptors = () => {
   
       //tratamento específico para erros conhecidos
       let userMessage = 'Erro desconhecido';
-      if (status === 400 && data?.errors) {
+      if (isNetworkError) {
+          userMessage = 'Falha na conexão. Verifique sua internet e tente novamente.';
+      } else if (status === 400 && data?.errors) {
         userMessage = data.errors.map(err => err.msg).join('\n') || 'Dados inválidos';
       } else if (status === 400 && url?.includes('/validar-codigo')) {
-        userMessage = data?.error || 'Código inválido'; // Mensagem específica para códigos
+        userMessage = data?.error || 'Código inválido';
       } else if (status === 401) {
         userMessage = data?.message || 'Sessão expirada. Faça login novamente.';
         if (!url?.includes('/login')) {
@@ -134,9 +136,17 @@ const setupResponseInterceptors = () => {
       } else if (status === 403) {
         userMessage = data?.message || 'Você não tem permissão para esta ação';
       } else if (status === 404) {
-        userMessage = 'Recurso não encontrado';
+        if (isEmailNotFound404) {
+          userMessage = 'Credenciais inválidas';
+        } else {
+          userMessage = 'Recurso não encontrado';
+        }
       } else if (status === 500) {
-        userMessage = 'Erro interno no servidor';
+        if (isHtmlError) {
+          userMessage = 'Erro no processamento do servidor';
+        } else {
+          userMessage = data?.message || 'Erro interno no servidor';
+        }
       } else if (data?.message) {
         userMessage = data.message;
       }
@@ -148,7 +158,8 @@ const setupResponseInterceptors = () => {
         isAuthError: status === 401,
         isValidationError: status === 400 && data?.errors || isCodeValidationError,
         isServerError: status >= 500,
-        isLoginError: isLoginError
+        isLoginError: isLoginError,
+        isEmailNotFound: isEmailNotFound404
       });
     }
   );

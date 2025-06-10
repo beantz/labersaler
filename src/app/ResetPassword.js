@@ -31,7 +31,6 @@ export default function RedefinirSenha() {
         return;
       }
   
-      // Tratamento de erros de validação (400)
       if (response.status === 400 && response.data?.errors) {
         const errorMessages = response.data.errors.map(err => 
           `• ${err.message}`
@@ -47,7 +46,6 @@ export default function RedefinirSenha() {
       throw new Error(response.data?.error || 'Falha ao alterar senha');
   
     } catch (error) {
-      // Suprime logs de erros 400 tratados
       if (!(error.response?.status === 400)) {
         console.error('Erro na redefinição:', error);
       }
@@ -55,7 +53,6 @@ export default function RedefinirSenha() {
       if (error.response) {
         const errorData = error.response.data || {};
         
-        // Tratamento especial para erros de validação
         if (error.response.status === 400 && errorData.errors) {
           const errorMessages = errorData.errors.map(err => 
             ` ${err.message}`
@@ -66,14 +63,14 @@ export default function RedefinirSenha() {
             errorMessages
           );
         
-        // Tratamento para usuário não encontrado (404)
+        
         } else if (error.response.status === 404) {
           Alert.alert(
             'Erro', 
             'Email não cadastrado no sistema'
           );
         
-        // Outros erros
+      
         } else {
           Alert.alert(
             'Erro', 
@@ -91,7 +88,7 @@ export default function RedefinirSenha() {
   
   return (
     <View style={styles.container}>
-      {/* Ícone de cadeado */}
+      
       <FontAwesome name="lock" size={50} color="white" style={styles.lockIcon} />
 
       <TextInput
@@ -103,7 +100,6 @@ export default function RedefinirSenha() {
         secureTextEntry={!isPasswordVisible}
       />
 
-      {/* Mostrar/ocultar senha alinhado à direita */}
       <TouchableOpacity
         style={styles.togglePassword}
         onPress={() => setIsPasswordVisible(!isPasswordVisible)}
@@ -119,7 +115,6 @@ export default function RedefinirSenha() {
         </Text>
       </TouchableOpacity>
 
-      {/* Botão azul */}
       <TouchableOpacity style={styles.button} onPress={handleRedefinirSenha}>
         <Text style={styles.buttonText}>Redefinir Senha</Text>
       </TouchableOpacity>

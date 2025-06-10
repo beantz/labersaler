@@ -14,7 +14,6 @@ export default function Book() {
   const [livroById, setLivroById] = useState(''); 
 
 
-  // Busca os reviews do livro ao carregar a tela
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -22,12 +21,10 @@ export default function Book() {
         
         const response = await api.get(`/Review/${livro.id}`);
         
-        // Verificação mais robusta da resposta
         if (!response || !response.data) {
           throw new Error('Resposta da API inválida');
         }
     
-        // Adaptação para a estrutura do seu backend
         const reviewsData = Array.isArray(response.data) 
           ? response.data.map(review => ({
               _id: review._id,
@@ -47,7 +44,6 @@ export default function Book() {
           stack: error.stack
         });
         
-        // Tratamento específico para erros de API
         if (error.response) {
           if (error.response.status === 404) {
             Alert.alert("Erro", "Livro não encontrado");
@@ -71,12 +67,9 @@ export default function Book() {
         setLoading(true);
         const response = await api.get(`/livros/${livro.id}`);
         
-        // Ajuste conforme a estrutura real da sua API
-        // Se a resposta for { success: true, livro: {...} }
         if (response.data && response.data.livro) {
           setLivroById(response.data.livro);
         } 
-        // Se a resposta for diretamente o objeto livro
         else if (response.data) {
           setLivroById(response.data);
         }
@@ -111,12 +104,11 @@ export default function Book() {
         }
       });
   
-      // Verificação da resposta
+
       if (!response || !response.data) {
         throw new Error('Resposta da API inválida');
       }
   
-      // Cria o novo review com estrutura compatível
       const newReview = {
         _id: response.data._id || Date.now().toString(),
         comentario: response.data.comentario || response.data.comentarios || comentario,
@@ -217,7 +209,6 @@ export default function Book() {
           <Text style={styles.livroPreco}>R$ {livro.preco.toFixed(2)}</Text>
           <Text style={styles.livroDescricao}>{livro.descricao}</Text>
 
-           {/* Adicione esta seção para visualizar os dados do vendedor */}
           <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#fff', paddingTop: 10 }}>
             <Text style={{ color: '#fff', fontWeight: 'bold' }}>Vendedor:</Text>
             <Text style={{ color: '#fff' }}>{livroById.vendedor?.nome || 'Nome não disponível'}</Text>
@@ -242,12 +233,10 @@ export default function Book() {
               return;
             }
 
-            //adiciona 55 se necessario
             const numeroFormatado = numeroLimpo.length === 11 ? `55${numeroLimpo}` : `55${numeroLimpo}`;
 
             const url = `https://wa.me/${numeroFormatado}`;
             
-            // Verifica se pode abrir o link
             const canOpen = await Linking.canOpenURL(url);
             
             if (canOpen) {
@@ -274,7 +263,6 @@ export default function Book() {
         </Text>
       </TouchableOpacity>
 
-      {/* Seção de Reviews */}
       <Text style={styles.avaliacoesTitulo}>Avaliações ({reviews.length})</Text>
       
       {loading && <Text style={styles.carregando}>Carregando avaliações...</Text>}
@@ -305,7 +293,6 @@ export default function Book() {
         </Text>
       )}
 
-      {/* Formulário para novo review */}
       <Text style={styles.avaliacoesTitulo}>Deixe sua avaliação:</Text>
       
       <View style={styles.comentarioInputContainer}>

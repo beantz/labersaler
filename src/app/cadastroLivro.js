@@ -69,9 +69,14 @@ export default function CadastroLivro() {
   }, []);
 
   const handleCadastrarLivro = async () => {
-    try {
+  try {
     if (!imagem || !imagem.uri) {
       Alert.alert('Atenção', 'Selecione uma imagem para o livro');
+      return;
+    }
+
+    if (!titulo || !autor || !preco || !estado || !selectedCategoryName || !imagem) {
+      Alert.alert('Atenção', 'Preencha todos os campos obrigatórios');
       return;
     }
 
@@ -119,15 +124,19 @@ export default function CadastroLivro() {
   } catch (error) {
     console.error('Erro completo:', error);
     console.error('Resposta do erro:', error.response?.data);
-      if (status === 400 && error.response?.data?.errors) {
+      if (error.response?.status === 400 && error.response?.data?.errors) {
         const errorMessages = error.response.data.errors.map(err => `• ${err.msg}`);
         Alert.alert('Erros no formulário', errorMessages.join('\n\n'));
-      } else if (status === 400 && error.response?.data?.categorias_disponiveis) {
+      } else if (error.response?.status === 400 ) {
+      
+        //extraindo os nomes das categorias
+        const categoriasNomes = categorias.map(cat => cat.nome);
         Alert.alert(
-          'Categoria não encontrada',
-          `${error.response.data.message}\n\nCategorias disponíveis:\n${error.response.data.categorias_disponiveis.join('\n')}`
+          'Selecione uma categoria:',
+          `\n\nCategorias disponíveis:\n${categoriasNomes.join('\n')}`
         );
-      } else if (status === 401) {
+
+      } else if (error.response?.status === 401) {
         Alert.alert('Erro de autenticação', 'Sessão expirada. Faça login novamente.');
         await AsyncStorage.removeItem('@auth_token');
         router.push('/login');

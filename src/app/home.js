@@ -74,9 +74,9 @@ export default function HomePage() {
         })
       }
     >
-      {item.imagem?.url ? (
+      {item.imagem?.url? (
         <Image
-          source={{ uri: item.imagem.url }}
+          source={{ uri: item.imagem?.url }}
           style={styles.livroImagem}
           onError={(e) => console.log('Erro ao carregar:', e.nativeEvent.error)}
           resizeMode="contain"

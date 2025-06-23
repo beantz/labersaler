@@ -4,7 +4,7 @@ import { Platform, Alert } from 'react-native';
 
 
 const api = axios.create({
-  baseURL: `http://192.168.0.105:3000`,
+  baseURL: `http://192.168.1.9:3000`,
   timeout: 10000,
   headers: {
     'Accept': 'application/json',
@@ -102,9 +102,12 @@ const setupResponseInterceptors = () => {
       const isEmailNotFound404 = status === 404 && url?.includes('/login') && data?.message === 'E-mail não encontrado'; 
       const isHtmlError = typeof data === 'string' && data.includes('<!DOCTYPE html>');
       const isNetworkError = error.message === 'Network Error';
+      const isCategoryError = status === 400 && 
+                      url?.includes('/livros/cadastrar') && 
+                      data?.message?.includes('Categoria');
 
       // Log detalhado para debugging
-      if (!isDeleteComment403 && !isHtmlError && !isValidationError && !isCodeValidationError && !isLoginError && !isEmailNotFound404  && !isNetworkError) {
+      if (!isCategoryError && !isDeleteComment403 && !isHtmlError && !isValidationError && !isCodeValidationError && !isLoginError && !isEmailNotFound404  && !isNetworkError) {
         console.error('[API Error]', {
           status,
           url,
@@ -121,8 +124,17 @@ const setupResponseInterceptors = () => {
       let userMessage = 'Erro desconhecido';
       if (isNetworkError) {
           userMessage = 'Falha na conexão. Verifique sua internet e tente novamente.';
-      } else if (status === 400 && data?.errors) {
-        userMessage = data.errors.map(err => err.msg).join('\n') || 'Dados inválidos';
+      } else if (isCategoryError) {
+          // Tratamento especial para erros de categoria - não mostra mensagem genérica
+          return Promise.reject({
+            ...error,
+            userMessage: '', // Mensagem vazia - será tratada no componente
+            isCategoryError: true,
+            isValidationError: true
+          }) } 
+        else if (status === 400 && data?.errors) {
+          userMessage = data.errors.map(err => err.msg).join('\n') || 'Dados inválidos';
+          
       } else if (status === 400 && url?.includes('/validar-codigo')) {
         userMessage = data?.error || 'Código inválido';
       } else if (status === 401) {
@@ -159,7 +171,8 @@ const setupResponseInterceptors = () => {
         isValidationError: status === 400 && data?.errors || isCodeValidationError,
         isServerError: status >= 500,
         isLoginError: isLoginError,
-        isEmailNotFound: isEmailNotFound404
+        isEmailNotFound: isEmailNotFound404,
+        isCategoryError: isCategoryError
       });
     }
   );
